@@ -76,10 +76,10 @@ namespace dae
 			Vertex& vertex = vertices_out[i];
 			vertex = vertices_in[i];
 
-			vertex.position = TransformToViewSpace(vertex.position);
-			vertex.position = PerspectiveDivide(vertex.position);
-			vertex.position = ApplyCameraSettings(vertex.position);
-			vertex.position = TransformToScreenSpace(vertex.position);
+			TransformToViewSpace(vertex.position);
+			PerspectiveDivide(vertex.position);
+			ApplyCameraSettings(vertex.position);
+			TransformToScreenSpace(vertex.position);
 		}
 	}
 
@@ -98,14 +98,19 @@ namespace dae
 			const Vertex& v1 = vertices[i + 1];
 			const Vertex& v2 = vertices[i + 2];
 
-			//const auto boxLeft		= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
-			//const auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
-			//const auto boxRight		= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
-			//const auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
+			auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
+			auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
+			auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
+			auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
 
-			for (int px = 0; px < m_Width; ++px)
+			boxLeft		= std::max(0, boxLeft);
+			boxTop		= std::max(0, boxTop);
+			boxRight	= std::min(m_Width, boxRight);
+			boxBottom	= std::min(m_Height, boxBottom);
+
+			for (int px = boxLeft; px < boxRight; ++px)
 			{
-				for (int py = 0; py < m_Height; ++py)
+				for (int py = boxTop; py < boxBottom; ++py)
 				{
 					Vector2 pixel{ px + 0.5f, py + 0.5f };
 					float w0, w1, w2;
@@ -168,35 +173,26 @@ namespace dae
 		m_pDepthBufferPixels[index] = depth;
 	}
 
-	Vector3 Renderer::TransformToViewSpace(const Vector3& vertex) const
+	void Renderer::TransformToViewSpace(Vector3& vertex) const
 	{
-		return m_Camera.viewMatrix.TransformPoint(vertex);
+		vertex = m_Camera.viewMatrix.TransformPoint(vertex);
 	}
 
-	Vector3 Renderer::PerspectiveDivide(const Vector3& vertex) const
+	void Renderer::PerspectiveDivide(Vector3& vertex) const
 	{
-		return {
-			vertex.x / vertex.z,
-			vertex.y / vertex.z,
-			vertex.z
-		};
+		vertex.x /= vertex.z;
+		vertex.y /= vertex.z;
 	}
 
-	Vector3 Renderer::ApplyCameraSettings(const Vector3& vertex) const
+	void Renderer::ApplyCameraSettings(Vector3& vertex) const
 	{
-		return {
-			vertex.x / (m_AspectRatio * m_Camera.fov),
-			vertex.y / m_Camera.fov,
-			vertex.z
-		};
+		vertex.x /= m_AspectRatio * m_Camera.fov;
+		vertex.y /= m_Camera.fov;
 	}
 
-	Vector3 Renderer::TransformToScreenSpace(const Vector3& vertex) const
+	void Renderer::TransformToScreenSpace(Vector3& vertex) const
 	{
-		return {
-			(vertex.x + 1) * 0.5f * m_Width,
-			(1 - vertex.y) * 0.5f * m_Height,
-			vertex.z
-		};
+		vertex.x = (vertex.x + 1) * 0.5f * m_Width;
+		vertex.y = (1 - vertex.y) * 0.5f * m_Height;
 	}
 }

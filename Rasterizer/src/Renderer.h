@@ -56,9 +56,9 @@ namespace dae
 		bool PerformDepthTest(int px, int py, float depth) const;
 		void WritePixel(int px, int py, const ColorRGB& color, float depth);
 
-		Vector3 TransformToViewSpace(const Vector3& vertex) const;
-		Vector3 PerspectiveDivide(const Vector3& vertex) const;
-		Vector3 ApplyCameraSettings(const Vector3& vertex) const;
-		Vector3 TransformToScreenSpace(const Vector3& vertex) const;
+		void TransformToViewSpace(Vector3& vertex) const;
+		void PerspectiveDivide(Vector3& vertex) const;
+		void ApplyCameraSettings(Vector3& vertex) const;
+		void TransformToScreenSpace(Vector3& vertex) const;
 	};
 }
