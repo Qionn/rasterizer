@@ -22,10 +22,10 @@ namespace dae
 		m_pBackBuffer = SDL_CreateRGBSurface(0, m_Width, m_Height, 32, 0, 0, 0, 0);
 		m_pBackBufferPixels = (uint32_t*)m_pBackBuffer->pixels;
 
-		//m_pDepthBufferPixels = new float[m_Width * m_Height];
+		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
 		//Initialize Camera
-		m_Camera.Initialize(60.f, { 0.0f,1.0f,-5.f });
+		m_Camera.Initialize(60.f, { 0.0f,0.0f,-10.f });
 	}
 
 	Renderer::~Renderer()
@@ -41,13 +41,20 @@ namespace dae
 	void Renderer::Render()
 	{
 		//@START
+		std::fill_n(m_pDepthBufferPixels.get(), m_Width * m_Height, FLT_MAX);
+		SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, 100, 100, 100));
+
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
 
 		std::vector<Vertex> vertices{
-			{ { 0.0f, 2.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-			{ { 1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
-			{ {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} }
+			{ { 0.0f,  2.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
+			{ { 1.5f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
+			{ {-1.5f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
+
+			{ { 0.0f,  4.0f, 2.0f}, {1.0f, 0.0f, 0.0f} },
+			{ { 3.0f, -2.0f, 2.0f}, {0.0f, 1.0f, 0.0f} },
+			{ {-3.0f, -2.0f, 2.0f}, {0.0f, 0.0f, 1.0f} }
 		};
 
 		VertexTransformationFunction(vertices, vertices);
@@ -57,7 +64,6 @@ namespace dae
 		//Update SDL Surface
 		SDL_UnlockSurface(m_pBackBuffer);
 		SDL_BlitSurface(m_pBackBuffer, 0, m_pFrontBuffer, 0);
-		SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, 0, 0, 0));
 		SDL_UpdateWindowSurface(m_pWindow);
 	}
 
@@ -106,10 +112,13 @@ namespace dae
 
 					if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position, w0, w1, w2)) continue;
 
+					float depth = v0.position.z * w0 + v1.position.z * w1 + v2.position.z * w2;
+					if (!PerformDepthTest(px, py, depth)) continue;
+
 					ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
 					color.MaxToOne();
 
-					WritePixel(px, py, color);
+					WritePixel(px, py, color, depth);
 				}
 			}
 		}
@@ -137,14 +146,26 @@ namespace dae
 		return (sign1 == sign2 && sign2 == sign3);
 	}
 
-	void Renderer::WritePixel(int px, int py, const ColorRGB& color)
+	bool Renderer::PerformDepthTest(int px, int py, float depth) const
 	{
-		m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(
+		int index = px + py * m_Width;
+		assert(index < m_Width * m_Height && "index out of bounds");
+		return depth < m_pDepthBufferPixels[index];
+	}
+
+	void Renderer::WritePixel(int px, int py, const ColorRGB& color, float depth)
+	{
+		int index = px + py * m_Width;
+		assert(index < m_Width * m_Height && "index out of bounds");
+
+		m_pBackBufferPixels[index] = SDL_MapRGB(
 			m_pBackBuffer->format,
 			static_cast<uint8_t>(color.r * 255),
 			static_cast<uint8_t>(color.g * 255),
 			static_cast<uint8_t>(color.b * 255)
 		);
+
+		m_pDepthBufferPixels[index] = depth;
 	}
 
 	Vector3 Renderer::TransformToViewSpace(const Vector3& vertex) const

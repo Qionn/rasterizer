@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 #include "Camera.h"
 
@@ -41,7 +42,7 @@ namespace dae
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
 
-		//float* m_pDepthBufferPixels{};
+		std::unique_ptr<float[]> m_pDepthBufferPixels{};
 
 		Camera m_Camera{};
 
@@ -52,7 +53,8 @@ namespace dae
 	private:
 		void RasterizeTriangles(const std::vector<Vertex>& vertices);
 		bool IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const;
-		void WritePixel(int px, int py, const ColorRGB& color);
+		bool PerformDepthTest(int px, int py, float depth) const;
+		void WritePixel(int px, int py, const ColorRGB& color, float depth);
 
 		Vector3 TransformToViewSpace(const Vector3& vertex) const;
 		Vector3 PerspectiveDivide(const Vector3& vertex) const;
