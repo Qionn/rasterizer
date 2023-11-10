@@ -51,7 +51,7 @@ namespace dae
 
 	private:
 		void RasterizeTriangles(const std::vector<Vertex>& vertices);
-		bool IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2) const;
+		bool IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const;
 		void WritePixel(int px, int py, const ColorRGB& color);
 
 		Vector3 TransformToViewSpace(const Vector3& vertex) const;

@@ -25,7 +25,7 @@ namespace dae
 		//m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 		//Initialize Camera
-		m_Camera.Initialize(60.f, { .0f,.0f,-10.f });
+		m_Camera.Initialize(60.f, { 0.0f,1.0f,-5.f });
 	}
 
 	Renderer::~Renderer()
@@ -45,9 +45,9 @@ namespace dae
 		SDL_LockSurface(m_pBackBuffer);
 
 		std::vector<Vertex> vertices{
-			{ { 0.0f, 2.0f, 0.0f} },
-			{ { 1.0f, 0.0f, 0.0f} },
-			{ {-1.0f, 0.0f, 0.0f} }
+			{ { 0.0f, 2.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
+			{ { 1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
+			{ {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} }
 		};
 
 		VertexTransformationFunction(vertices, vertices);
@@ -102,16 +102,20 @@ namespace dae
 				for (int py = 0; py < m_Height; ++py)
 				{
 					Vector2 pixel{ px + 0.5f, py + 0.5f };
-					if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position)) continue;
+					float w0, w1, w2;
 
-					ColorRGB color = colors::White;
+					if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position, w0, w1, w2)) continue;
+
+					ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
+					color.MaxToOne();
+
 					WritePixel(px, py, color);
 				}
 			}
 		}
 	}
 
-	bool Renderer::IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2) const
+	bool Renderer::IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const
 	{
 		Vector2 V0V1 = (v1 - v0).GetXY();
 		Vector2 V1V2 = (v2 - v1).GetXY();
@@ -121,9 +125,14 @@ namespace dae
 		Vector2 V1P = pixel - v1.GetXY();
 		Vector2 V2P = pixel - v2.GetXY();
 
-		bool sign1 = std::signbit(Vector2::Cross(V0V1, V0P));
-		bool sign2 = std::signbit(Vector2::Cross(V1V2, V1P));
-		bool sign3 = std::signbit(Vector2::Cross(V2V0, V2P));
+		float invTotalWeight = 1.0f / Vector2::Cross(V0V1, -V2V0);
+		w0 = Vector2::Cross(V1V2, V1P) * invTotalWeight;
+		w1 = Vector2::Cross(V2V0, V2P) * invTotalWeight;
+		w2 = Vector2::Cross(V0V1, V0P) * invTotalWeight;
+
+		bool sign1 = std::signbit(w0);
+		bool sign2 = std::signbit(w1);
+		bool sign3 = std::signbit(w2);
 
 		return (sign1 == sign2 && sign2 == sign3);
 	}
