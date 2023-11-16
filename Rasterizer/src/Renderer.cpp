@@ -48,6 +48,25 @@ namespace dae
 		SDL_LockSurface(m_pBackBuffer);
 
 		std::vector<Mesh> meshes{
+			//Mesh {
+			//	{
+			//		Vertex{ {-3,  3, -2} },
+			//		Vertex{ { 0,  3, -2} },
+			//		Vertex{ { 3,  3, -2} },
+			//		Vertex{ {-3,  0, -2} },
+			//		Vertex{ { 0,  0, -2} },
+			//		Vertex{ { 3,  0, -2} },
+			//		Vertex{ {-3, -3, -2} },
+			//		Vertex{ { 0, -3, -2} },
+			//		Vertex{ { 3, -3, -2} },
+			//	},
+			//	{
+			//		3, 0, 1,    1, 4, 3,    4, 1, 2,
+			//		2, 5, 4,    6, 3, 4,    4, 7, 6,
+			//		7, 4, 5,    5, 8, 7
+			//	},
+			//	PrimitiveTopology::TriangleList
+			//},
 			Mesh {
 				{
 					Vertex{ {-3,  3, -2} },
@@ -61,12 +80,12 @@ namespace dae
 					Vertex{ { 3, -3, -2} },
 				},
 				{
-					3, 0, 1,    1, 4, 3,    4, 1, 2,
-					2, 5, 4,    6, 3, 4,    4, 7, 6,
-					7, 4, 5,    5, 8, 7
+					3, 0, 4, 1, 5, 2,
+					2, 6,
+					6, 3, 7, 4, 8, 5
 				},
-				PrimitiveTopology::TriangleList
-			}
+				PrimitiveTopology::TriangleStrip
+			},
 		};
 
 		for (auto& mesh : meshes)
@@ -101,7 +120,7 @@ namespace dae
 			Vertex_Out& vertex = vertices_out[i];
 
 			// Convert Vertex to Vertex_Out
-			vertex.position = { vertices_in[i].position, 0.0f };
+			vertex.position = { vertices_in[i].position, 1.0f };
 			vertex.color = vertices_in[i].color;
 
 			TransformToViewSpace(vertex.position);
@@ -118,12 +137,25 @@ namespace dae
 
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
 	{
+		for (size_t i = 2; i < mesh.indices.size(); ++i)
+		{
+			size_t i0 = i - 2;
+			size_t i1 = i - 1;
+			size_t i2 = i;
 
+			if (i0 == i1 || i1 == i2) continue;
+
+			const Vertex_Out& v0 = mesh.vertices_out[mesh.indices[i0]];
+			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i1]];
+			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i2]];
+
+			RasterizeTriangle(v0, v1, v2);
+		}
 	}
 
 	void Renderer::RasterizeTriangleList(const Mesh& mesh)
 	{
-		assert(mesh.indices.size() % 3 == 0 && "incomplete triangle");
+		assert(mesh.indices.size() % 3 == 0 && "incomplete triangles");
 
 		for (size_t i = 0; i < mesh.indices.size(); i += 3)
 		{
