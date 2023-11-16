@@ -177,10 +177,11 @@ namespace dae
 
 	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
 	{
-		auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
-		auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
-		auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
-		auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
+		// Find triangle bounding box
+		auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x })) - 1;
+		auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y })) - 1;
+		auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x })) + 1;
+		auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y })) + 1;
 
 		boxLeft			= std::max(0, boxLeft);
 		boxTop			= std::max(0, boxTop);
