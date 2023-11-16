@@ -48,25 +48,6 @@ namespace dae
 		SDL_LockSurface(m_pBackBuffer);
 
 		std::vector<Mesh> meshes{
-			//Mesh {
-			//	{
-			//		Vertex{ {-3,  3, -2} },
-			//		Vertex{ { 0,  3, -2} },
-			//		Vertex{ { 3,  3, -2} },
-			//		Vertex{ {-3,  0, -2} },
-			//		Vertex{ { 0,  0, -2} },
-			//		Vertex{ { 3,  0, -2} },
-			//		Vertex{ {-3, -3, -2} },
-			//		Vertex{ { 0, -3, -2} },
-			//		Vertex{ { 3, -3, -2} },
-			//	},
-			//	{
-			//		3, 0, 1,    1, 4, 3,    4, 1, 2,
-			//		2, 5, 4,    6, 3, 4,    4, 7, 6,
-			//		7, 4, 5,    5, 8, 7
-			//	},
-			//	PrimitiveTopology::TriangleList
-			//},
 			Mesh {
 				{
 					Vertex{ {-3,  3, -2} },
@@ -80,12 +61,31 @@ namespace dae
 					Vertex{ { 3, -3, -2} },
 				},
 				{
-					3, 0, 4, 1, 5, 2,
-					2, 6,
-					6, 3, 7, 4, 8, 5
+					3, 0, 1,    1, 4, 3,    4, 1, 2,
+					2, 5, 4,    6, 3, 4,    4, 7, 6,
+					7, 4, 5,    5, 8, 7
 				},
-				PrimitiveTopology::TriangleStrip
+				PrimitiveTopology::TriangleList
 			},
+			//Mesh {
+			//	{
+			//		Vertex{ {-3,  3, -2} },
+			//		Vertex{ { 0,  3, -2} },
+			//		Vertex{ { 3,  3, -2} },
+			//		Vertex{ {-3,  0, -2} },
+			//		Vertex{ { 0,  0, -2} },
+			//		Vertex{ { 3,  0, -2} },
+			//		Vertex{ {-3, -3, -2} },
+			//		Vertex{ { 0, -3, -2} },
+			//		Vertex{ { 3, -3, -2} },
+			//	},
+			//	{
+			//		3, 0, 4, 1, 5, 2,
+			//		2, 6,
+			//		6, 3, 7, 4, 8, 5
+			//	},
+			//	PrimitiveTopology::TriangleStrip
+			//}
 		};
 
 		for (auto& mesh : meshes)
@@ -94,13 +94,13 @@ namespace dae
 
 			switch (mesh.primitiveTopology)
 			{
-			case PrimitiveTopology::TriangleList:
-				RasterizeTriangleList(mesh);
-				break;
+				case PrimitiveTopology::TriangleList:
+					RasterizeTriangleList(mesh);
+					break;
 
-			case PrimitiveTopology::TriangleStrip:
-				RasterizeTriangleStrip(mesh);
-				break;
+				case PrimitiveTopology::TriangleStrip:
+					RasterizeTriangleStrip(mesh);
+					break;
 			}
 		}
 
@@ -123,10 +123,20 @@ namespace dae
 			vertex.position = { vertices_in[i].position, 1.0f };
 			vertex.color = vertices_in[i].color;
 
-			TransformToViewSpace(vertex.position);
-			PerspectiveDivide(vertex.position);
-			ApplyCameraSettings(vertex.position);
-			TransformToScreenSpace(vertex.position);
+			// Transform to view space
+			vertex.position = m_Camera.viewMatrix.TransformPoint(vertex.position);
+
+			// Perspective divide
+			vertex.position.x /= vertex.position.z;
+			vertex.position.y /= vertex.position.z;
+
+			// Apply camera settings
+			vertex.position.x /= m_AspectRatio * m_Camera.fov;
+			vertex.position.y /= m_Camera.fov;
+
+			// Transform to screen space
+			vertex.position.x = (vertex.position.x + 1) * 0.5f * m_Width;
+			vertex.position.y = (1 - vertex.position.y) * 0.5f * m_Height;
 		}
 	}
 
@@ -139,11 +149,9 @@ namespace dae
 	{
 		for (size_t i = 2; i < mesh.indices.size(); ++i)
 		{
-			size_t i0 = i - 2;
-			size_t i1 = i - 1;
+			size_t i0 = i - ((i % 2) == 0 ? 2 : 1);
+			size_t i1 = i - ((i % 2) == 0 ? 1 : 2);
 			size_t i2 = i;
-
-			if (i0 == i1 || i1 == i2) continue;
 
 			const Vertex_Out& v0 = mesh.vertices_out[mesh.indices[i0]];
 			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i1]];
@@ -169,100 +177,70 @@ namespace dae
 
 	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
 	{
-		auto boxLeft = static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
-		auto boxTop = static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
-		auto boxRight = static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
-		auto boxBottom = static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
+		auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
+		auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
+		auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
+		auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
 
-		boxLeft = std::max(0, boxLeft);
-		boxTop = std::max(0, boxTop);
-		boxRight = std::min(m_Width, boxRight);
-		boxBottom = std::min(m_Height, boxBottom);
+		boxLeft			= std::max(0, boxLeft);
+		boxTop			= std::max(0, boxTop);
+		boxRight		= std::min(m_Width, boxRight);
+		boxBottom		= std::min(m_Height, boxBottom);
+
+		// Calculate triangle edges
+		Vector2 e0 = (v1.position - v0.position).GetXY();
+		Vector2 e1 = (v2.position - v1.position).GetXY();
+		Vector2 e2 = (v0.position - v2.position).GetXY();
 
 		for (int px = boxLeft; px < boxRight; ++px)
 		{
 			for (int py = boxTop; py < boxBottom; ++py)
 			{
+				int bufferIndex = px + py * m_Width;
 				Vector2 pixel{ px + 0.5f, py + 0.5f };
-				float w0, w1, w2;
 
-				if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position, w0, w1, w2)) continue;
+				assert(bufferIndex < m_Width * m_Height && "buffer index out of bounds");
 
+				// Calculate vertex to pixel vectors
+				Vector2 p0 = pixel - v0.position.GetXY();
+				Vector2 p1 = pixel - v1.position.GetXY();
+				Vector2 p2 = pixel - v2.position.GetXY();
+
+				// Barycentric cooridnates (weights)
+				float invTotalWeight = 1.0f / Vector2::Cross(e0, -e2);
+				float w0 = Vector2::Cross(e1, p1) * invTotalWeight;
+				float w1 = Vector2::Cross(e2, p2) * invTotalWeight;
+				float w2 = Vector2::Cross(e0, p0) * invTotalWeight;
+
+				bool sign0 = std::signbit(w0);
+				bool sign1 = std::signbit(w1);
+				bool sign2 = std::signbit(w2);
+
+				// Check sign equality,
+				// - false: pixel inside triangle
+				// - true: pixel outside triangle
+				if (sign0 != sign1 || sign1 != sign2) continue;
+
+				// Interpolate depth value using weights
 				float depth = v0.position.z * w0 + v1.position.z * w1 + v2.position.z * w2;
-				if (!PerformDepthTest(px, py, depth)) continue;
 
+				// Depth test
+				// - false: pixel in front
+				// - true: pixel behind object
+				if (depth > m_pDepthBufferPixels[bufferIndex]) continue;
+				m_pDepthBufferPixels[bufferIndex] = depth;
+
+				// Interpolate vertex colors using weights
 				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
 				color.MaxToOne();
 
-				WritePixel(px, py, color, depth);
+				m_pBackBufferPixels[bufferIndex] = SDL_MapRGB(
+					m_pBackBuffer->format,
+					static_cast<uint8_t>(color.r * 255),
+					static_cast<uint8_t>(color.g * 255),
+					static_cast<uint8_t>(color.b * 255)
+				);
 			}
 		}
-	}
-
-	bool Renderer::IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const
-	{
-		Vector2 V0V1 = (v1 - v0).GetXY();
-		Vector2 V1V2 = (v2 - v1).GetXY();
-		Vector2 V2V0 = (v0 - v2).GetXY();
-
-		Vector2 V0P = pixel - v0.GetXY();
-		Vector2 V1P = pixel - v1.GetXY();
-		Vector2 V2P = pixel - v2.GetXY();
-
-		float invTotalWeight = 1.0f / Vector2::Cross(V0V1, -V2V0);
-		w0 = Vector2::Cross(V1V2, V1P) * invTotalWeight;
-		w1 = Vector2::Cross(V2V0, V2P) * invTotalWeight;
-		w2 = Vector2::Cross(V0V1, V0P) * invTotalWeight;
-
-		bool sign1 = std::signbit(w0);
-		bool sign2 = std::signbit(w1);
-		bool sign3 = std::signbit(w2);
-
-		return (sign1 == sign2 && sign2 == sign3);
-	}
-
-	bool Renderer::PerformDepthTest(int px, int py, float depth) const
-	{
-		int index = px + py * m_Width;
-		assert(index < m_Width * m_Height && "index out of bounds");
-		return depth < m_pDepthBufferPixels[index];
-	}
-
-	void Renderer::WritePixel(int px, int py, const ColorRGB& color, float depth)
-	{
-		int index = px + py * m_Width;
-		assert(index < m_Width * m_Height && "index out of bounds");
-
-		m_pBackBufferPixels[index] = SDL_MapRGB(
-			m_pBackBuffer->format,
-			static_cast<uint8_t>(color.r * 255),
-			static_cast<uint8_t>(color.g * 255),
-			static_cast<uint8_t>(color.b * 255)
-		);
-
-		m_pDepthBufferPixels[index] = depth;
-	}
-
-	void Renderer::TransformToViewSpace(Vector4& vertex) const
-	{
-		vertex = m_Camera.viewMatrix.TransformPoint(vertex);
-	}
-
-	void Renderer::PerspectiveDivide(Vector4& vertex) const
-	{
-		vertex.x /= vertex.z;
-		vertex.y /= vertex.z;
-	}
-
-	void Renderer::ApplyCameraSettings(Vector4& vertex) const
-	{
-		vertex.x /= m_AspectRatio * m_Camera.fov;
-		vertex.y /= m_Camera.fov;
-	}
-
-	void Renderer::TransformToScreenSpace(Vector4& vertex) const
-	{
-		vertex.x = (vertex.x + 1) * 0.5f * m_Width;
-		vertex.y = (1 - vertex.y) * 0.5f * m_Height;
 	}
 }

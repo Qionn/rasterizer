@@ -55,13 +55,5 @@ namespace dae
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
 		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
-		bool IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const;
-		bool PerformDepthTest(int px, int py, float depth) const;
-		void WritePixel(int px, int py, const ColorRGB& color, float depth);
-
-		void TransformToViewSpace(Vector4& vertex) const;
-		void PerspectiveDivide(Vector4& vertex) const;
-		void ApplyCameraSettings(Vector4& vertex) const;
-		void TransformToScreenSpace(Vector4& vertex) const;
 	};
 }
