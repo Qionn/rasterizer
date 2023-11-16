@@ -45,6 +45,9 @@ namespace dae
 
 		std::unique_ptr<float[]> m_pDepthBufferPixels{};
 
+		// Temporary
+		std::unique_ptr<Texture> m_pTestTexture;
+
 		Camera m_Camera{};
 
 		int m_Width{};

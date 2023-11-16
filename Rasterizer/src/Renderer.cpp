@@ -24,6 +24,8 @@ namespace dae
 
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
+		m_pTestTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
+
 		//Initialize Camera
 		m_Camera.Initialize(60.f, { 0.0f,0.0f,-10.f });
 	}
@@ -50,15 +52,15 @@ namespace dae
 		std::vector<Mesh> meshes{
 			Mesh {
 				{
-					Vertex{ {-3,  3, -2} },
-					Vertex{ { 0,  3, -2} },
-					Vertex{ { 3,  3, -2} },
-					Vertex{ {-3,  0, -2} },
-					Vertex{ { 0,  0, -2} },
-					Vertex{ { 3,  0, -2} },
-					Vertex{ {-3, -3, -2} },
-					Vertex{ { 0, -3, -2} },
-					Vertex{ { 3, -3, -2} },
+					Vertex{ {-3,  3, -2}, colors::White, {0.0f, 0.0f} },
+					Vertex{ { 0,  3, -2}, colors::White, {0.5f, 0.0f} },
+					Vertex{ { 3,  3, -2}, colors::White, {1.0f, 0.0f} },
+					Vertex{ {-3,  0, -2}, colors::White, {0.0f, 0.5f} },
+					Vertex{ { 0,  0, -2}, colors::White, {0.5f, 0.5f} },
+					Vertex{ { 3,  0, -2}, colors::White, {1.0f, 0.5f} },
+					Vertex{ {-3, -3, -2}, colors::White, {0.0f, 1.0f} },
+					Vertex{ { 0, -3, -2}, colors::White, {0.5f, 1.0f} },
+					Vertex{ { 3, -3, -2}, colors::White, {1.0f, 1.0f} },
 				},
 				{
 					3, 0, 1,    1, 4, 3,    4, 1, 2,
@@ -120,8 +122,9 @@ namespace dae
 			Vertex_Out& vertex = vertices_out[i];
 
 			// Convert Vertex to Vertex_Out
-			vertex.position = { vertices_in[i].position, 1.0f };
-			vertex.color = vertices_in[i].color;
+			vertex.position	= { vertices_in[i].position, 0.0f };
+			vertex.color	= vertices_in[i].color;
+			vertex.uv		= vertices_in[i].uv;
 
 			// Transform to view space
 			vertex.position = m_Camera.viewMatrix.TransformPoint(vertex.position);
@@ -223,17 +226,20 @@ namespace dae
 				if (sign0 != sign1 || sign1 != sign2) continue;
 
 				// Interpolate depth value using weights
-				float depth = v0.position.z * w0 + v1.position.z * w1 + v2.position.z * w2;
+				float depth = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
 
 				// Depth test
 				// - false: pixel in front
 				// - true: pixel behind object
 				if (depth > m_pDepthBufferPixels[bufferIndex]) continue;
-				m_pDepthBufferPixels[bufferIndex] = depth;
 
 				// Interpolate vertex colors using weights
 				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
 				color.MaxToOne();
+
+				Vector2 uv = (v0.uv / v0.position.z * w0 + v1.uv / v1.position.z * w1 + v2.uv / v2.position.z * w2) * depth;
+				if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
+				color *= m_pTestTexture->Sample(uv);
 
 				m_pBackBufferPixels[bufferIndex] = SDL_MapRGB(
 					m_pBackBuffer->format,
@@ -241,6 +247,8 @@ namespace dae
 					static_cast<uint8_t>(color.g * 255),
 					static_cast<uint8_t>(color.b * 255)
 				);
+
+				m_pDepthBufferPixels[bufferIndex] = depth;
 			}
 		}
 	}
