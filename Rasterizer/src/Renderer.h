@@ -14,6 +14,7 @@ namespace dae
 	class Texture;
 	struct Mesh;
 	struct Vertex;
+	struct Vertex_Out;
 	class Timer;
 	class Scene;
 
@@ -33,7 +34,7 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 
-		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
+		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const;
 
 	private:
 		SDL_Window* m_pWindow{};
@@ -51,14 +52,16 @@ namespace dae
 		float m_AspectRatio{};
 
 	private:
-		void RasterizeTriangles(const std::vector<Vertex>& vertices);
+		void RasterizeTriangleStrip(const Mesh& mesh);
+		void RasterizeTriangleList(const Mesh& mesh);
+		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
 		bool IsPixelInsideTriangle(const Vector2& pixel, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& w0, float& w1, float& w2) const;
 		bool PerformDepthTest(int px, int py, float depth) const;
 		void WritePixel(int px, int py, const ColorRGB& color, float depth);
 
-		void TransformToViewSpace(Vector3& vertex) const;
-		void PerspectiveDivide(Vector3& vertex) const;
-		void ApplyCameraSettings(Vector3& vertex) const;
-		void TransformToScreenSpace(Vector3& vertex) const;
+		void TransformToViewSpace(Vector4& vertex) const;
+		void PerspectiveDivide(Vector4& vertex) const;
+		void ApplyCameraSettings(Vector4& vertex) const;
+		void TransformToScreenSpace(Vector4& vertex) const;
 	};
 }

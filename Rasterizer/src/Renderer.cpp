@@ -47,18 +47,43 @@ namespace dae
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
 
-		std::vector<Vertex> vertices{
-			{ { 0.0f,  2.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-			{ { 1.5f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-			{ {-1.5f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-
-			{ { 0.0f,  4.0f, 2.0f}, {1.0f, 0.0f, 0.0f} },
-			{ { 3.0f, -2.0f, 2.0f}, {0.0f, 1.0f, 0.0f} },
-			{ {-3.0f, -2.0f, 2.0f}, {0.0f, 0.0f, 1.0f} }
+		std::vector<Mesh> meshes{
+			Mesh {
+				{
+					Vertex{ {-3,  3, -2} },
+					Vertex{ { 0,  3, -2} },
+					Vertex{ { 3,  3, -2} },
+					Vertex{ {-3,  0, -2} },
+					Vertex{ { 0,  0, -2} },
+					Vertex{ { 3,  0, -2} },
+					Vertex{ {-3, -3, -2} },
+					Vertex{ { 0, -3, -2} },
+					Vertex{ { 3, -3, -2} },
+				},
+				{
+					3, 0, 1,    1, 4, 3,    4, 1, 2,
+					2, 5, 4,    6, 3, 4,    4, 7, 6,
+					7, 4, 5,    5, 8, 7
+				},
+				PrimitiveTopology::TriangleList
+			}
 		};
 
-		VertexTransformationFunction(vertices, vertices);
-		RasterizeTriangles(vertices);
+		for (auto& mesh : meshes)
+		{
+			VertexTransformationFunction(mesh.vertices, mesh.vertices_out);
+
+			switch (mesh.primitiveTopology)
+			{
+			case PrimitiveTopology::TriangleList:
+				RasterizeTriangleList(mesh);
+				break;
+
+			case PrimitiveTopology::TriangleStrip:
+				RasterizeTriangleStrip(mesh);
+				break;
+			}
+		}
 
 		//@END
 		//Update SDL Surface
@@ -67,14 +92,17 @@ namespace dae
 		SDL_UpdateWindowSurface(m_pWindow);
 	}
 
-	void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const
+	void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const
 	{
 		vertices_out.resize(vertices_in.size());
 
 		for (size_t i = 0; i < vertices_in.size(); ++i)
 		{
-			Vertex& vertex = vertices_out[i];
-			vertex = vertices_in[i];
+			Vertex_Out& vertex = vertices_out[i];
+
+			// Convert Vertex to Vertex_Out
+			vertex.position = { vertices_in[i].position, 0.0f };
+			vertex.color = vertices_in[i].color;
 
 			TransformToViewSpace(vertex.position);
 			PerspectiveDivide(vertex.position);
@@ -88,43 +116,53 @@ namespace dae
 		return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 	}
 
-	void Renderer::RasterizeTriangles(const std::vector<Vertex>& vertices)
+	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
 	{
-		assert(vertices.size() % 3 == 0 && "incomplete triangles");
 
-		for (size_t i = 0; i < vertices.size(); i += 3)
+	}
+
+	void Renderer::RasterizeTriangleList(const Mesh& mesh)
+	{
+		assert(mesh.indices.size() % 3 == 0 && "incomplete triangle");
+
+		for (size_t i = 0; i < mesh.indices.size(); i += 3)
 		{
-			const Vertex& v0 = vertices[i];
-			const Vertex& v1 = vertices[i + 1];
-			const Vertex& v2 = vertices[i + 2];
+			const Vertex_Out& v0 = mesh.vertices_out[mesh.indices[i]];
+			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i + 1]];
+			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i + 2]];
 
-			auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
-			auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
-			auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
-			auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
+			RasterizeTriangle(v0, v1, v2);
+		}
+	}
 
-			boxLeft		= std::max(0, boxLeft);
-			boxTop		= std::max(0, boxTop);
-			boxRight	= std::min(m_Width, boxRight);
-			boxBottom	= std::min(m_Height, boxBottom);
+	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
+	{
+		auto boxLeft = static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x }));
+		auto boxTop = static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y }));
+		auto boxRight = static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x }));
+		auto boxBottom = static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y }));
 
-			for (int px = boxLeft; px < boxRight; ++px)
+		boxLeft = std::max(0, boxLeft);
+		boxTop = std::max(0, boxTop);
+		boxRight = std::min(m_Width, boxRight);
+		boxBottom = std::min(m_Height, boxBottom);
+
+		for (int px = boxLeft; px < boxRight; ++px)
+		{
+			for (int py = boxTop; py < boxBottom; ++py)
 			{
-				for (int py = boxTop; py < boxBottom; ++py)
-				{
-					Vector2 pixel{ px + 0.5f, py + 0.5f };
-					float w0, w1, w2;
+				Vector2 pixel{ px + 0.5f, py + 0.5f };
+				float w0, w1, w2;
 
-					if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position, w0, w1, w2)) continue;
+				if (!IsPixelInsideTriangle(pixel, v0.position, v1.position, v2.position, w0, w1, w2)) continue;
 
-					float depth = v0.position.z * w0 + v1.position.z * w1 + v2.position.z * w2;
-					if (!PerformDepthTest(px, py, depth)) continue;
+				float depth = v0.position.z * w0 + v1.position.z * w1 + v2.position.z * w2;
+				if (!PerformDepthTest(px, py, depth)) continue;
 
-					ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
-					color.MaxToOne();
+				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
+				color.MaxToOne();
 
-					WritePixel(px, py, color, depth);
-				}
+				WritePixel(px, py, color, depth);
 			}
 		}
 	}
@@ -173,24 +211,24 @@ namespace dae
 		m_pDepthBufferPixels[index] = depth;
 	}
 
-	void Renderer::TransformToViewSpace(Vector3& vertex) const
+	void Renderer::TransformToViewSpace(Vector4& vertex) const
 	{
 		vertex = m_Camera.viewMatrix.TransformPoint(vertex);
 	}
 
-	void Renderer::PerspectiveDivide(Vector3& vertex) const
+	void Renderer::PerspectiveDivide(Vector4& vertex) const
 	{
 		vertex.x /= vertex.z;
 		vertex.y /= vertex.z;
 	}
 
-	void Renderer::ApplyCameraSettings(Vector3& vertex) const
+	void Renderer::ApplyCameraSettings(Vector4& vertex) const
 	{
 		vertex.x /= m_AspectRatio * m_Camera.fov;
 		vertex.y /= m_Camera.fov;
 	}
 
-	void Renderer::TransformToScreenSpace(Vector3& vertex) const
+	void Renderer::TransformToScreenSpace(Vector4& vertex) const
 	{
 		vertex.x = (vertex.x + 1) * 0.5f * m_Width;
 		vertex.y = (1 - vertex.y) * 0.5f * m_Height;
