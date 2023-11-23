@@ -34,7 +34,7 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 
-		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const;
+		void VertexTransformationFunction(Mesh& mesh) const;
 
 	private:
 		SDL_Window* m_pWindow{};

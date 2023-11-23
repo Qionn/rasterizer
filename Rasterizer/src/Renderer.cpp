@@ -27,7 +27,7 @@ namespace dae
 		m_pTestTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
 
 		//Initialize Camera
-		m_Camera.Initialize(60.f, { 0.0f,0.0f,-10.f });
+		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 0.0f, -10.f });
 	}
 
 	Renderer::~Renderer()
@@ -92,7 +92,7 @@ namespace dae
 
 		for (auto& mesh : meshes)
 		{
-			VertexTransformationFunction(mesh.vertices, mesh.vertices_out);
+			VertexTransformationFunction(mesh);
 
 			switch (mesh.primitiveTopology)
 			{
@@ -113,29 +113,30 @@ namespace dae
 		SDL_UpdateWindowSurface(m_pWindow);
 	}
 
-	void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out) const
+	void Renderer::VertexTransformationFunction(Mesh& mesh) const
 	{
-		vertices_out.resize(vertices_in.size());
+		const auto& verticesIn = mesh.vertices;
+		auto& verticesOut = mesh.vertices_out;
 
-		for (size_t i = 0; i < vertices_in.size(); ++i)
+		Matrix wvp = mesh.worldMatrix * m_Camera.viewMatrix * m_Camera.projectionMatrix;
+
+		verticesOut.resize(verticesIn.size());
+
+		for (size_t i = 0; i < verticesIn.size(); ++i)
 		{
-			Vertex_Out& vertex = vertices_out[i];
+			Vertex_Out& vertex = verticesOut[i];
 
 			// Convert Vertex to Vertex_Out
-			vertex.position	= { vertices_in[i].position, 0.0f };
-			vertex.color	= vertices_in[i].color;
-			vertex.uv		= vertices_in[i].uv;
+			vertex.position	= { verticesIn[i].position, 1.0f };
+			vertex.color	= verticesIn[i].color;
+			vertex.uv		= verticesIn[i].uv;
 
-			// Transform to view space
-			vertex.position = m_Camera.viewMatrix.TransformPoint(vertex.position);
+			vertex.position = wvp.TransformPoint(vertex.position);
 
 			// Perspective divide
-			vertex.position.x /= vertex.position.z;
-			vertex.position.y /= vertex.position.z;
-
-			// Apply camera settings
-			vertex.position.x /= m_AspectRatio * m_Camera.fov;
-			vertex.position.y /= m_Camera.fov;
+			vertex.position.x /= vertex.position.w;
+			vertex.position.y /= vertex.position.w;
+			vertex.position.z /= vertex.position.w;
 
 			// Transform to screen space
 			vertex.position.x = (vertex.position.x + 1) * 0.5f * m_Width;
@@ -220,24 +221,30 @@ namespace dae
 				bool sign1 = std::signbit(w1);
 				bool sign2 = std::signbit(w2);
 
-				// Check sign equality,
+				// Check sign equality
 				// - false: pixel inside triangle
 				// - true: pixel outside triangle
 				if (sign0 != sign1 || sign1 != sign2) continue;
 
 				// Interpolate depth value using weights
-				float depth = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
+				float depthZ = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
+				float depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
+
+				// Frustum culling
+				// - false: inside frustum
+				// - true: outside frustum
+				if (depthZ < 0.0f || depthZ > 1.0f) continue;
 
 				// Depth test
 				// - false: pixel in front
 				// - true: pixel behind object
-				if (depth > m_pDepthBufferPixels[bufferIndex]) continue;
+				if (depthZ > m_pDepthBufferPixels[bufferIndex]) continue;
 
 				// Interpolate vertex colors using weights
 				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
 				color.MaxToOne();
-
-				Vector2 uv = (v0.uv / v0.position.z * w0 + v1.uv / v1.position.z * w1 + v2.uv / v2.position.z * w2) * depth;
+				
+				Vector2 uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
 				if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
 				color *= m_pTestTexture->Sample(uv);
 
@@ -248,7 +255,7 @@ namespace dae
 					static_cast<uint8_t>(color.b * 255)
 				);
 
-				m_pDepthBufferPixels[bufferIndex] = depth;
+				m_pDepthBufferPixels[bufferIndex] = depthZ;
 			}
 		}
 	}
