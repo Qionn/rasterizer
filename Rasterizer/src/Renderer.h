@@ -44,9 +44,7 @@ namespace dae
 		uint32_t* m_pBackBufferPixels{};
 
 		std::unique_ptr<float[]> m_pDepthBufferPixels{};
-
-		// Temporary
-		std::unique_ptr<Texture> m_pTestTexture;
+		std::vector<Mesh> m_Meshes;
 
 		Camera m_Camera{};
 
@@ -57,6 +55,6 @@ namespace dae
 	private:
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
-		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
+		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2, Texture* pTexture = nullptr);
 	};
 }

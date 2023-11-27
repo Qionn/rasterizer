@@ -24,10 +24,15 @@ namespace dae
 
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
-		m_pTestTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
-
 		//Initialize Camera
 		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 0.0f, -10.f });
+		
+		Mesh tuktuk;
+		Utils::ParseOBJ("Resources/tuktuk.obj", tuktuk.vertices, tuktuk.indices);
+		tuktuk.texture = Texture::LoadFromFile("Resources/tuktuk.png");
+		tuktuk.primitiveTopology = PrimitiveTopology::TriangleList;
+
+		m_Meshes.emplace_back(std::move(tuktuk));
 	}
 
 	Renderer::~Renderer()
@@ -49,48 +54,7 @@ namespace dae
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
 
-		std::vector<Mesh> meshes{
-			Mesh {
-				{
-					Vertex{ {-3,  3, -2}, colors::White, {0.0f, 0.0f} },
-					Vertex{ { 0,  3, -2}, colors::White, {0.5f, 0.0f} },
-					Vertex{ { 3,  3, -2}, colors::White, {1.0f, 0.0f} },
-					Vertex{ {-3,  0, -2}, colors::White, {0.0f, 0.5f} },
-					Vertex{ { 0,  0, -2}, colors::White, {0.5f, 0.5f} },
-					Vertex{ { 3,  0, -2}, colors::White, {1.0f, 0.5f} },
-					Vertex{ {-3, -3, -2}, colors::White, {0.0f, 1.0f} },
-					Vertex{ { 0, -3, -2}, colors::White, {0.5f, 1.0f} },
-					Vertex{ { 3, -3, -2}, colors::White, {1.0f, 1.0f} },
-				},
-				{
-					3, 0, 1,    1, 4, 3,    4, 1, 2,
-					2, 5, 4,    6, 3, 4,    4, 7, 6,
-					7, 4, 5,    5, 8, 7
-				},
-				PrimitiveTopology::TriangleList
-			},
-			//Mesh {
-			//	{
-			//		Vertex{ {-3,  3, -2} },
-			//		Vertex{ { 0,  3, -2} },
-			//		Vertex{ { 3,  3, -2} },
-			//		Vertex{ {-3,  0, -2} },
-			//		Vertex{ { 0,  0, -2} },
-			//		Vertex{ { 3,  0, -2} },
-			//		Vertex{ {-3, -3, -2} },
-			//		Vertex{ { 0, -3, -2} },
-			//		Vertex{ { 3, -3, -2} },
-			//	},
-			//	{
-			//		3, 0, 4, 1, 5, 2,
-			//		2, 6,
-			//		6, 3, 7, 4, 8, 5
-			//	},
-			//	PrimitiveTopology::TriangleStrip
-			//}
-		};
-
-		for (auto& mesh : meshes)
+		for (auto& mesh : m_Meshes)
 		{
 			VertexTransformationFunction(mesh);
 
@@ -130,6 +94,8 @@ namespace dae
 			vertex.position	= { verticesIn[i].position, 1.0f };
 			vertex.color	= verticesIn[i].color;
 			vertex.uv		= verticesIn[i].uv;
+			vertex.normal	= verticesIn[i].normal;
+			vertex.tangent	= verticesIn[i].tangent;
 
 			vertex.position = wvp.TransformPoint(vertex.position);
 
@@ -161,7 +127,7 @@ namespace dae
 			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i1]];
 			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i2]];
 
-			RasterizeTriangle(v0, v1, v2);
+			RasterizeTriangle(v0, v1, v2, mesh.texture.get());
 		}
 	}
 
@@ -175,11 +141,11 @@ namespace dae
 			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i + 1]];
 			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i + 2]];
 
-			RasterizeTriangle(v0, v1, v2);
+			RasterizeTriangle(v0, v1, v2, mesh.texture.get());
 		}
 	}
 
-	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
+	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2, Texture* pTexture)
 	{
 		// Find triangle bounding box
 		auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x })) - 1;
@@ -187,10 +153,7 @@ namespace dae
 		auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x })) + 1;
 		auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y })) + 1;
 
-		boxLeft			= std::max(0, boxLeft);
-		boxTop			= std::max(0, boxTop);
-		boxRight		= std::min(m_Width, boxRight);
-		boxBottom		= std::min(m_Height, boxBottom);
+		if (boxLeft < 0.0f || boxRight > m_Width || boxTop < 0.0f || boxBottom > m_Height) return;
 
 		// Calculate triangle edges
 		Vector2 e0 = (v1.position - v0.position).GetXY();
@@ -244,9 +207,12 @@ namespace dae
 				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
 				color.MaxToOne();
 				
-				Vector2 uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
-				if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
-				color *= m_pTestTexture->Sample(uv);
+				if (pTexture != nullptr)
+				{
+					Vector2 uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
+					if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
+					color *= pTexture->Sample(uv);
+				}
 
 				m_pBackBufferPixels[bufferIndex] = SDL_MapRGB(
 					m_pBackBuffer->format,
