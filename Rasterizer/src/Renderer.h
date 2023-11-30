@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Camera.h"
+#include "DataTypes.h"
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -34,6 +35,7 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 		void ToggleDebugDepthBuffer();
+		void ToggleDebugRotation();
 
 		void VertexTransformationFunction(Mesh& mesh) const;
 
@@ -45,9 +47,15 @@ namespace dae
 		uint32_t* m_pBackBufferPixels{};
 
 		std::unique_ptr<float[]> m_pDepthBufferPixels{};
-		std::vector<Mesh> m_Meshes;
 
 		Camera m_Camera{};
+		Vector3 m_GlobalLightDirection{ .577f, -.577f, .577f };
+
+		// ==== DEBUG MESH ====
+		Mesh m_TestMesh{};
+		std::unique_ptr<Texture> m_pTestAlbedoTexture;
+		bool m_RotateTestMesh{ true };
+		// ====================
 
 		int m_Width{};
 		int m_Height{};
@@ -57,6 +65,8 @@ namespace dae
 	private:
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
-		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2, Texture* pTexture = nullptr);
+		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
+
+		void ShadePixel(int pixelIndex, const Vertex_Out& v) const;
 	};
 }

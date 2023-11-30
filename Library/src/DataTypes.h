@@ -39,8 +39,6 @@ namespace dae
 		std::vector<uint32_t> indices{};
 		PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleStrip };
 
-		std::unique_ptr<Texture> texture{ nullptr };
-
 		std::vector<Vertex_Out> vertices_out{};
 		Matrix worldMatrix{};
 	};

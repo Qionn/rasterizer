@@ -25,14 +25,14 @@ namespace dae
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
 		//Initialize Camera
-		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 0.0f, -10.f });
+		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 20.0f, -30.f });
+		m_Camera.totalPitch = -40.0f * TO_RADIANS;
 		
-		Mesh tuktuk;
-		Utils::ParseOBJ("Resources/tuktuk.obj", tuktuk.vertices, tuktuk.indices);
-		tuktuk.texture = Texture::LoadFromFile("Resources/tuktuk.png");
-		tuktuk.primitiveTopology = PrimitiveTopology::TriangleList;
+		// Initialize test mesh & texture(s)
+		Utils::ParseOBJ("Resources/vehicle.obj", m_TestMesh.vertices, m_TestMesh.indices);
+		m_TestMesh.primitiveTopology = PrimitiveTopology::TriangleList;
 
-		m_Meshes.emplace_back(std::move(tuktuk));
+		m_pTestAlbedoTexture = Texture::LoadFromFile("Resources/vehicle_diffuse.png");
 	}
 
 	Renderer::~Renderer()
@@ -43,6 +43,12 @@ namespace dae
 	void Renderer::Update(Timer* pTimer)
 	{
 		m_Camera.Update(pTimer);
+
+		if (m_RotateTestMesh)
+		{
+			const float rotationSpeed = 1.0f;
+			m_TestMesh.worldMatrix *= Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed());
+		}
 	}
 
 	void Renderer::Render()
@@ -54,20 +60,18 @@ namespace dae
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
 
-		for (auto& mesh : m_Meshes)
+		// Render Test mesh
+		VertexTransformationFunction(m_TestMesh);
+
+		switch (m_TestMesh.primitiveTopology)
 		{
-			VertexTransformationFunction(mesh);
+		case PrimitiveTopology::TriangleList:
+			RasterizeTriangleList(m_TestMesh);
+			break;
 
-			switch (mesh.primitiveTopology)
-			{
-				case PrimitiveTopology::TriangleList:
-					RasterizeTriangleList(mesh);
-					break;
-
-				case PrimitiveTopology::TriangleStrip:
-					RasterizeTriangleStrip(mesh);
-					break;
-			}
+		case PrimitiveTopology::TriangleStrip:
+			RasterizeTriangleStrip(m_TestMesh);
+			break;
 		}
 
 		//@END
@@ -120,6 +124,11 @@ namespace dae
 		m_DebugDepthBuffer = !m_DebugDepthBuffer;
 	}
 
+	void Renderer::ToggleDebugRotation()
+	{
+		m_RotateTestMesh = !m_RotateTestMesh;
+	}
+
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
 	{
 		for (size_t i = 2; i < mesh.indices.size(); ++i)
@@ -132,7 +141,7 @@ namespace dae
 			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i1]];
 			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i2]];
 
-			RasterizeTriangle(v0, v1, v2, mesh.texture.get());
+			RasterizeTriangle(v0, v1, v2);
 		}
 	}
 
@@ -146,11 +155,11 @@ namespace dae
 			const Vertex_Out& v1 = mesh.vertices_out[mesh.indices[i + 1]];
 			const Vertex_Out& v2 = mesh.vertices_out[mesh.indices[i + 2]];
 
-			RasterizeTriangle(v0, v1, v2, mesh.texture.get());
+			RasterizeTriangle(v0, v1, v2);
 		}
 	}
 
-	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2, Texture* pTexture)
+	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
 	{
 		if (v0.position.w < 0.0f || v1.position.w < 0.0f || v2.position.w < 0.0f) return;
 
@@ -173,12 +182,12 @@ namespace dae
 		const float invTotalWeight = 1.0f / Vector2::Cross(e0, -e2);
 
 		// Loop variables
-		int bufferIndex = -1;
+		int pixelIndex = -1;
 		Vector2 pixel, p0, p1, p2;
 		float w0, w1, w2;
 		float depthZ, depthW;
-		ColorRGB color;
-		Vector2 uv;
+
+		Vertex_Out pixelVertex;
 
 		for (int px = boxLeft; px < boxRight; ++px)
 		{
@@ -187,8 +196,8 @@ namespace dae
 				pixel.x = px + 0.5f;
 				pixel.y = py + 0.5f;
 
-				bufferIndex = px + py * m_Width;
-				assert(bufferIndex < m_Width * m_Height && "buffer index out of bounds");
+				pixelIndex = px + py * m_Width;
+				assert(pixelIndex < m_Width * m_Height && "buffer index out of bounds");
 
 				// Calculate vertex to pixel vectors
 				p0 = pixel - v0.position.GetXY();
@@ -217,35 +226,48 @@ namespace dae
 				// Depth test
 				// - false: pixel in front
 				// - true: pixel behind object
-				if (depthZ > m_pDepthBufferPixels[bufferIndex]) continue;
+				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
 
-				if (m_DebugDepthBuffer)
-				{
-					color.r = color.g = color.b = depthZ;
-				}
-				else
-				{
-					// Interpolate vertex colors using weights
-					color = v0.color * w0 + v1.color * w1 + v2.color * w2;
-					color.MaxToOne();	
+				m_pDepthBufferPixels[pixelIndex] = depthZ;
 
-					if (pTexture != nullptr)
-					{
-						uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
-						if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
-						color *= pTexture->Sample(uv);
-					}
-				}
+				pixelVertex.position	= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
+				pixelVertex.color		= v0.color * w0 + v1.color * w1 + v2.color * w2;
+				pixelVertex.normal		= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
+				pixelVertex.tangent		= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
+				pixelVertex.uv			= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
 
-				m_pBackBufferPixels[bufferIndex] = SDL_MapRGB(
-					m_pBackBuffer->format,
-					static_cast<uint8_t>(color.r * 255),
-					static_cast<uint8_t>(color.g * 255),
-					static_cast<uint8_t>(color.b * 255)
-				);
-
-				m_pDepthBufferPixels[bufferIndex] = depthZ;
+				ShadePixel(pixelIndex, pixelVertex);
 			}
 		}
+	}
+
+	void Renderer::ShadePixel(int pixelIndex, const Vertex_Out& v) const
+	{
+		ColorRGB color;
+
+		if (m_DebugDepthBuffer)
+		{
+			color.r = color.g = color.b = v.position.z;
+		}
+		else
+		{
+			if (m_pTestAlbedoTexture != nullptr)
+			{
+				if (v.uv.x < 0.0f || v.uv.x > 1.0f || v.uv.y < 0.0f || v.uv.y > 1.0f) return;
+				color = m_pTestAlbedoTexture->Sample(v.uv);
+			}
+			else
+			{
+				color = v.color;
+				color.MaxToOne();
+			}
+		}
+
+		m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
+			m_pBackBuffer->format,
+			static_cast<uint8_t>(color.r * 255),
+			static_cast<uint8_t>(color.g * 255),
+			static_cast<uint8_t>(color.b * 255)
+		);
 	}
 }
