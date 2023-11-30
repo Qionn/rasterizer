@@ -25,8 +25,8 @@ namespace dae
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
 		//Initialize Camera
-		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 20.0f, -30.f });
-		m_Camera.totalPitch = -40.0f * TO_RADIANS;
+		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 5.0f, -35.f });
+		m_Camera.totalPitch = -10.0f * TO_RADIANS;
 		m_Camera.walkSpeed = 30.0f;
 		
 		// Initialize test mesh & texture(s)
@@ -131,6 +131,11 @@ namespace dae
 		m_RotateTestMesh = !m_RotateTestMesh;
 	}
 
+	void Renderer::ToggleNormalMapping()
+	{
+		m_NormalMapping = !m_NormalMapping;
+	}
+
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
 	{
 		for (size_t i = 2; i < mesh.indices.size(); ++i)
@@ -209,16 +214,12 @@ namespace dae
 				w2 = Vector2::Cross(e0, p0) * invTotalWeight;
 
 				// Check sign equality
-				// - false: pixel inside triangle
-				// - true: pixel outside triangle
 				if (w0 < 0.0f || w1 < 0.0f || w2 < 0.0f) continue;
 
 				// Interpolate depth Z value using weights
 				depthZ = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
 
 				// Frustum culling
-				// - false: inside frustum
-				// - true: outside frustum
 				if (depthZ < 0.0f || depthZ > 1.0f) continue;
 
 				// Calculate pixel index
@@ -226,13 +227,11 @@ namespace dae
 				assert(pixelIndex < m_Width * m_Height && "buffer index out of bounds");
 
 				// Depth test
-				// - false: pixel in front
-				// - true: pixel behind object
 				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
 
-				// Interpolate depth W value using weights
 				m_pDepthBufferPixels[pixelIndex] = depthZ;
 
+				// Interpolate depth W value using weights
 				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
 
 				pixelVertex.position	= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
@@ -251,7 +250,7 @@ namespace dae
 		ColorRGB color = v.color;
 		Vector3 normal = v.normal;
 
-		if (m_pTestNormalTexture != nullptr)
+		if (m_NormalMapping && m_pTestNormalTexture != nullptr)
 		{
 			Vector3 binoral = Vector3::Cross(v.normal, v.tangent);
 			Matrix tangentSpaceMatrix = Matrix{ v.tangent, binoral, v.normal, Vector3::Zero };

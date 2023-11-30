@@ -77,6 +77,10 @@ int main(int argc, char* args[])
 					case SDL_SCANCODE_R:
 						pRenderer->ToggleDebugRotation();
 						break;
+
+					case SDL_SCANCODE_N:
+						pRenderer->ToggleNormalMapping();
+						break;
 				}
 				break;
 			}

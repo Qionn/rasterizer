@@ -36,6 +36,7 @@ namespace dae
 		bool SaveBufferToImage() const;
 		void ToggleDebugDepthBuffer();
 		void ToggleDebugRotation();
+		void ToggleNormalMapping();
 
 		void VertexTransformationFunction(Mesh& mesh) const;
 
@@ -61,7 +62,9 @@ namespace dae
 		int m_Width{};
 		int m_Height{};
 		float m_AspectRatio{};
+
 		bool m_DebugDepthBuffer{};
+		bool m_NormalMapping{ true };
 
 	private:
 		void RasterizeTriangleStrip(const Mesh& mesh);
