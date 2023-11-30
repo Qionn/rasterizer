@@ -33,8 +33,10 @@ namespace dae
 		Utils::ParseOBJ("Resources/vehicle.obj", m_TestMesh.vertices, m_TestMesh.indices);
 		m_TestMesh.primitiveTopology = PrimitiveTopology::TriangleList;
 
-		m_pTestAlbedoTexture = Texture::LoadFromFile("Resources/vehicle_diffuse.png");
-		m_pTestNormalTexture = Texture::LoadFromFile("Resources/vehicle_normal.png");
+		m_pTestAlbedoTexture	= Texture::LoadFromFile("Resources/vehicle_diffuse.png");
+		m_pTestNormalTexture	= Texture::LoadFromFile("Resources/vehicle_normal.png");
+		m_pTestGlossTexture		= Texture::LoadFromFile("Resources/vehicle_gloss.png");
+		m_pTestSpecularTexture	= Texture::LoadFromFile("Resources/vehicle_specular.png");
 	}
 
 	Renderer::~Renderer()
@@ -104,6 +106,9 @@ namespace dae
 			vertex.tangent	= mesh.worldMatrix.TransformVector(verticesIn[i].tangent);
 
 			vertex.position = wvp.TransformPoint(vertex.position);
+
+			Vector3 worldPosition = mesh.worldMatrix.TransformPoint(vertex.position);
+			vertex.viewDirection = (worldPosition - m_Camera.origin).Normalized();
 
 			// Perspective divide
 			vertex.position.x /= vertex.position.w;
@@ -234,11 +239,12 @@ namespace dae
 				// Interpolate depth W value using weights
 				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
 
-				pixelVertex.position	= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
-				pixelVertex.color		= v0.color * w0 + v1.color * w1 + v2.color * w2;
-				pixelVertex.normal		= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
-				pixelVertex.tangent		= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
-				pixelVertex.uv			= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
+				pixelVertex.position		= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
+				pixelVertex.color			= v0.color * w0 + v1.color * w1 + v2.color * w2;
+				pixelVertex.normal			= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
+				pixelVertex.tangent			= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
+				pixelVertex.viewDirection	= (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
+				pixelVertex.uv				= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
 
 				ShadePixel(pixelIndex, pixelVertex);
 			}
@@ -267,8 +273,17 @@ namespace dae
 		{
 			if (m_pTestAlbedoTexture != nullptr)
 			{
-				if (v.uv.x < 0.0f || v.uv.x > 1.0f || v.uv.y < 0.0f || v.uv.y > 1.0f) return;
 				color = m_pTestAlbedoTexture->Sample(v.uv);
+			}
+
+			if (m_pTestGlossTexture != nullptr && m_pTestSpecularTexture != nullptr)
+			{
+				float cosa = Vector3::Dot(Vector3::Reflect(-m_GlobalLightDirection, normal), v.viewDirection);
+				if (cosa > 0.0f)
+				{
+					float phong = m_pTestSpecularTexture->SampleGray(v.uv) * std::pow(cosa, m_pTestGlossTexture->SampleGray(v.uv) * m_Shininess);
+					color += { phong, phong, phong };
+				}
 			}
 
 			color *= observedArea;

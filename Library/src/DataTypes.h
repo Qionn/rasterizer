@@ -14,7 +14,6 @@ namespace dae
 		Vector2 uv{}; //W2
 		Vector3 normal{}; //W4
 		Vector3 tangent{}; //W4
-		//Vector3 viewDirection{}; //W4
 	};
 
 	struct Vertex_Out
@@ -24,7 +23,7 @@ namespace dae
 		Vector2 uv{};
 		Vector3 normal{};
 		Vector3 tangent{};
-		//Vector3 viewDirection{};
+		Vector3 viewDirection{};
 	};
 
 	enum class PrimitiveTopology

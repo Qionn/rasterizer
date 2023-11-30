@@ -17,6 +17,7 @@ namespace dae
 		static std::unique_ptr<Texture> LoadFromFile(const std::string& path);
 		ColorRGB Sample(const Vector2& uv) const;
 		Vector3 SampleNormal(const Vector2& uv) const;
+		float SampleGray(const Vector2& uv) const;
 
 	private:
 		Texture(SDL_Surface* pSurface);

@@ -6,6 +6,7 @@
 
 #include "Camera.h"
 #include "DataTypes.h"
+#include "ColorRGB.h"
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -50,12 +51,16 @@ namespace dae
 		std::unique_ptr<float[]> m_pDepthBufferPixels{};
 
 		Camera m_Camera{};
+
 		Vector3 m_GlobalLightDirection{ 0.577f, -0.577f, 0.577f };
+		float m_Shininess{ 25.0f };
 
 		// ==== DEBUG MESH ====
 		Mesh m_TestMesh{};
 		std::unique_ptr<Texture> m_pTestAlbedoTexture;
 		std::unique_ptr<Texture> m_pTestNormalTexture;
+		std::unique_ptr<Texture> m_pTestGlossTexture;
+		std::unique_ptr<Texture> m_pTestSpecularTexture;
 		bool m_RotateTestMesh{ false };
 		// ====================
 
