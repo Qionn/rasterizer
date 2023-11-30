@@ -152,6 +152,8 @@ namespace dae
 
 	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2, Texture* pTexture)
 	{
+		if (v0.position.w < 0.0f || v1.position.w < 0.0f || v2.position.w < 0.0f) return;
+
 		// Find triangle bounding box
 		auto boxLeft	= static_cast<int>(std::min({ v0.position.x, v1.position.x, v2.position.x })) - 1;
 		auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y })) - 1;
