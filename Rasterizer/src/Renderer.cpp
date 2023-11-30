@@ -91,7 +91,7 @@ namespace dae
 			Vertex_Out& vertex = verticesOut[i];
 
 			// Convert Vertex to Vertex_Out
-			vertex.position	= { verticesIn[i].position, 1.0f };
+			vertex.position	= { verticesIn[i].position, 0.0f };
 			vertex.color	= verticesIn[i].color;
 			vertex.uv		= verticesIn[i].uv;
 			vertex.normal	= verticesIn[i].normal;
@@ -113,6 +113,11 @@ namespace dae
 	bool Renderer::SaveBufferToImage() const
 	{
 		return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
+	}
+
+	void Renderer::ToggleDebugDepthBuffer()
+	{
+		m_DebugDepthBuffer = !m_DebugDepthBuffer;
 	}
 
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
@@ -152,46 +157,55 @@ namespace dae
 		auto boxTop		= static_cast<int>(std::min({ v0.position.y, v1.position.y, v2.position.y })) - 1;
 		auto boxRight	= static_cast<int>(std::max({ v0.position.x, v1.position.x, v2.position.x })) + 1;
 		auto boxBottom	= static_cast<int>(std::max({ v0.position.y, v1.position.y, v2.position.y })) + 1;
-
-		if (boxLeft < 0.0f || boxRight > m_Width || boxTop < 0.0f || boxBottom > m_Height) return;
+		
+		boxLeft			= std::max(0, boxLeft);
+		boxTop			= std::max(0, boxTop);
+		boxRight		= std::min(m_Width, boxRight);
+		boxBottom		= std::min(m_Height, boxBottom);
 
 		// Calculate triangle edges
-		Vector2 e0 = (v1.position - v0.position).GetXY();
-		Vector2 e1 = (v2.position - v1.position).GetXY();
-		Vector2 e2 = (v0.position - v2.position).GetXY();
+		const Vector2 e0 = (v1.position - v0.position).GetXY();
+		const Vector2 e1 = (v2.position - v1.position).GetXY();
+		const Vector2 e2 = (v0.position - v2.position).GetXY();
+
+		const float invTotalWeight = 1.0f / Vector2::Cross(e0, -e2);
+
+		// Loop variables
+		int bufferIndex = -1;
+		Vector2 pixel, p0, p1, p2;
+		float w0, w1, w2;
+		float depthZ, depthW;
+		ColorRGB color;
+		Vector2 uv;
 
 		for (int px = boxLeft; px < boxRight; ++px)
 		{
 			for (int py = boxTop; py < boxBottom; ++py)
 			{
-				int bufferIndex = px + py * m_Width;
-				Vector2 pixel{ px + 0.5f, py + 0.5f };
+				pixel.x = px + 0.5f;
+				pixel.y = py + 0.5f;
 
+				bufferIndex = px + py * m_Width;
 				assert(bufferIndex < m_Width * m_Height && "buffer index out of bounds");
 
 				// Calculate vertex to pixel vectors
-				Vector2 p0 = pixel - v0.position.GetXY();
-				Vector2 p1 = pixel - v1.position.GetXY();
-				Vector2 p2 = pixel - v2.position.GetXY();
+				p0 = pixel - v0.position.GetXY();
+				p1 = pixel - v1.position.GetXY();
+				p2 = pixel - v2.position.GetXY();
 
 				// Barycentric cooridnates (weights)
-				float invTotalWeight = 1.0f / Vector2::Cross(e0, -e2);
-				float w0 = Vector2::Cross(e1, p1) * invTotalWeight;
-				float w1 = Vector2::Cross(e2, p2) * invTotalWeight;
-				float w2 = Vector2::Cross(e0, p0) * invTotalWeight;
-
-				bool sign0 = std::signbit(w0);
-				bool sign1 = std::signbit(w1);
-				bool sign2 = std::signbit(w2);
+				w0 = Vector2::Cross(e1, p1) * invTotalWeight;
+				w1 = Vector2::Cross(e2, p2) * invTotalWeight;
+				w2 = Vector2::Cross(e0, p0) * invTotalWeight;
 
 				// Check sign equality
 				// - false: pixel inside triangle
 				// - true: pixel outside triangle
-				if (sign0 != sign1 || sign1 != sign2) continue;
+				if (w0 < 0.0f || w1 < 0.0f || w2 < 0.0f) continue;
 
 				// Interpolate depth value using weights
-				float depthZ = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
-				float depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
+				depthZ = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
+				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
 
 				// Frustum culling
 				// - false: inside frustum
@@ -203,15 +217,22 @@ namespace dae
 				// - true: pixel behind object
 				if (depthZ > m_pDepthBufferPixels[bufferIndex]) continue;
 
-				// Interpolate vertex colors using weights
-				ColorRGB color = v0.color * w0 + v1.color * w1 + v2.color * w2;
-				color.MaxToOne();
-				
-				if (pTexture != nullptr)
+				if (m_DebugDepthBuffer)
 				{
-					Vector2 uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
-					if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
-					color *= pTexture->Sample(uv);
+					color.r = color.g = color.b = depthZ;
+				}
+				else
+				{
+					// Interpolate vertex colors using weights
+					color = v0.color * w0 + v1.color * w1 + v2.color * w2;
+					color.MaxToOne();	
+
+					if (pTexture != nullptr)
+					{
+						uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
+						if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) continue;
+						color *= pTexture->Sample(uv);
+					}
 				}
 
 				m_pBackBufferPixels[bufferIndex] = SDL_MapRGB(
