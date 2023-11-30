@@ -27,6 +27,7 @@ namespace dae
 		//Initialize Camera
 		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 20.0f, -30.f });
 		m_Camera.totalPitch = -40.0f * TO_RADIANS;
+		m_Camera.walkSpeed = 30.0f;
 		
 		// Initialize test mesh & texture(s)
 		Utils::ParseOBJ("Resources/vehicle.obj", m_TestMesh.vertices, m_TestMesh.indices);
@@ -98,8 +99,8 @@ namespace dae
 			vertex.position	= { verticesIn[i].position, 0.0f };
 			vertex.color	= verticesIn[i].color;
 			vertex.uv		= verticesIn[i].uv;
-			vertex.normal	= verticesIn[i].normal;
-			vertex.tangent	= verticesIn[i].tangent;
+			vertex.normal	= mesh.worldMatrix.TransformVector(verticesIn[i].normal);
+			vertex.tangent	= mesh.worldMatrix.TransformVector(verticesIn[i].tangent);
 
 			vertex.position = wvp.TransformPoint(vertex.position);
 
@@ -244,6 +245,7 @@ namespace dae
 	void Renderer::ShadePixel(int pixelIndex, const Vertex_Out& v) const
 	{
 		ColorRGB color;
+		float observedArea = std::max(Vector3::Dot(-m_GlobalLightDirection, v.normal), 0.0f);
 
 		if (m_DebugDepthBuffer)
 		{
@@ -259,9 +261,12 @@ namespace dae
 			else
 			{
 				color = v.color;
-				color.MaxToOne();
 			}
+
+			color *= observedArea;
 		}
+
+		color.MaxToOne();
 
 		m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
 			m_pBackBuffer->format,
