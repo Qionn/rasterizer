@@ -34,6 +34,7 @@ namespace dae
 		m_TestMesh.primitiveTopology = PrimitiveTopology::TriangleList;
 
 		m_pTestAlbedoTexture = Texture::LoadFromFile("Resources/vehicle_diffuse.png");
+		m_pTestNormalTexture = Texture::LoadFromFile("Resources/vehicle_normal.png");
 	}
 
 	Renderer::~Renderer()
@@ -197,9 +198,6 @@ namespace dae
 				pixel.x = px + 0.5f;
 				pixel.y = py + 0.5f;
 
-				pixelIndex = px + py * m_Width;
-				assert(pixelIndex < m_Width * m_Height && "buffer index out of bounds");
-
 				// Calculate vertex to pixel vectors
 				p0 = pixel - v0.position.GetXY();
 				p1 = pixel - v1.position.GetXY();
@@ -215,21 +213,27 @@ namespace dae
 				// - true: pixel outside triangle
 				if (w0 < 0.0f || w1 < 0.0f || w2 < 0.0f) continue;
 
-				// Interpolate depth value using weights
+				// Interpolate depth Z value using weights
 				depthZ = 1.0f / (w0 / v0.position.z + w1 / v1.position.z + w2 / v2.position.z);
-				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
 
 				// Frustum culling
 				// - false: inside frustum
 				// - true: outside frustum
 				if (depthZ < 0.0f || depthZ > 1.0f) continue;
 
+				// Calculate pixel index
+				pixelIndex = px + py * m_Width;
+				assert(pixelIndex < m_Width * m_Height && "buffer index out of bounds");
+
 				// Depth test
 				// - false: pixel in front
 				// - true: pixel behind object
 				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
 
+				// Interpolate depth W value using weights
 				m_pDepthBufferPixels[pixelIndex] = depthZ;
+
+				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
 
 				pixelVertex.position	= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
 				pixelVertex.color		= v0.color * w0 + v1.color * w1 + v2.color * w2;
@@ -244,8 +248,17 @@ namespace dae
 
 	void Renderer::ShadePixel(int pixelIndex, const Vertex_Out& v) const
 	{
-		ColorRGB color;
-		float observedArea = std::max(Vector3::Dot(-m_GlobalLightDirection, v.normal), 0.0f);
+		ColorRGB color = v.color;
+		Vector3 normal = v.normal;
+
+		if (m_pTestNormalTexture != nullptr)
+		{
+			Vector3 binoral = Vector3::Cross(v.normal, v.tangent);
+			Matrix tangentSpaceMatrix = Matrix{ v.tangent, binoral, v.normal, Vector3::Zero };
+			normal = tangentSpaceMatrix.TransformVector(m_pTestNormalTexture->SampleNormal(v.uv));
+		}
+
+		float observedArea = std::max(Vector3::Dot(-m_GlobalLightDirection, normal), 0.0f);
 
 		if (m_DebugDepthBuffer)
 		{
@@ -258,15 +271,10 @@ namespace dae
 				if (v.uv.x < 0.0f || v.uv.x > 1.0f || v.uv.y < 0.0f || v.uv.y > 1.0f) return;
 				color = m_pTestAlbedoTexture->Sample(v.uv);
 			}
-			else
-			{
-				color = v.color;
-			}
 
 			color *= observedArea;
+			color.MaxToOne();
 		}
-
-		color.MaxToOne();
 
 		m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
 			m_pBackBuffer->format,

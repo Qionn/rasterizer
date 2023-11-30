@@ -54,6 +54,7 @@ namespace dae
 		// ==== DEBUG MESH ====
 		Mesh m_TestMesh{};
 		std::unique_ptr<Texture> m_pTestAlbedoTexture;
+		std::unique_ptr<Texture> m_pTestNormalTexture;
 		bool m_RotateTestMesh{ false };
 		// ====================
 

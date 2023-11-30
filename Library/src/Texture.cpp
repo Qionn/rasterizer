@@ -39,4 +39,16 @@ namespace dae
 			b / 255.0f
 		};
 	}
+
+	Vector3 Texture::SampleNormal(const Vector2& uv) const
+	{
+		ColorRGB sample = Sample(uv);
+
+		return {
+			2 * sample.r - 1,
+			2 * sample.g - 1,
+			2 * sample.b - 1
+		};
+	}
+
 }
