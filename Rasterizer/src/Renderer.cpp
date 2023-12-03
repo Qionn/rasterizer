@@ -25,13 +25,13 @@ namespace dae
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
 
 		//Initialize Camera
-		m_Camera.Initialize(m_AspectRatio, 60.f, { 0.0f, 5.0f, -35.f });
-		m_Camera.totalPitch = -10.0f * TO_RADIANS;
+		m_Camera.Initialize(m_AspectRatio, 45.f, { 0.0f, 0.0f, 0.f });
 		m_Camera.walkSpeed = 30.0f;
 		
 		// Initialize test mesh & texture(s)
 		Utils::ParseOBJ("Resources/vehicle.obj", m_TestMesh.vertices, m_TestMesh.indices);
 		m_TestMesh.primitiveTopology = PrimitiveTopology::TriangleList;
+		m_TestMesh.worldMatrix = Matrix::CreateTranslation(0.0f, 0.0f, 50.0f);
 
 		m_pTestAlbedoTexture	= Texture::LoadFromFile("Resources/vehicle_diffuse.png");
 		m_pTestNormalTexture	= Texture::LoadFromFile("Resources/vehicle_normal.png");
@@ -51,7 +51,7 @@ namespace dae
 		if (m_RotateTestMesh)
 		{
 			const float rotationSpeed = 1.0f;
-			m_TestMesh.worldMatrix *= Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed());
+			m_TestMesh.worldMatrix = Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed()) * m_TestMesh.worldMatrix;
 		}
 	}
 
@@ -81,7 +81,7 @@ namespace dae
 		//@END
 		//Update SDL Surface
 		SDL_UnlockSurface(m_pBackBuffer);
-		SDL_BlitSurface(m_pBackBuffer, 0, m_pFrontBuffer, 0);
+		SDL_BlitSurface(m_pBackBuffer, nullptr, m_pFrontBuffer, nullptr);
 		SDL_UpdateWindowSurface(m_pWindow);
 	}
 
@@ -201,9 +201,9 @@ namespace dae
 
 		Vertex_Out pixelVertex;
 
-		for (int px = boxLeft; px < boxRight; ++px)
+		for (int py = boxTop; py < boxBottom; ++py)
 		{
-			for (int py = boxTop; py < boxBottom; ++py)
+			for (int px = boxLeft; px < boxRight; ++px)
 			{
 				pixel.x = px + 0.5f;
 				pixel.y = py + 0.5f;
@@ -229,7 +229,7 @@ namespace dae
 
 				// Calculate pixel index
 				pixelIndex = px + py * m_Width;
-				assert(pixelIndex < m_Width * m_Height && "buffer index out of bounds");
+				assert(pixelIndex >= 0 && pixelIndex < m_Width * m_Height && "buffer index out of bounds");
 
 				// Depth test
 				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
@@ -287,8 +287,9 @@ namespace dae
 			}
 
 			color *= observedArea;
-			color.MaxToOne();
 		}
+
+		color.MaxToOne();
 
 		m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
 			m_pBackBuffer->format,
