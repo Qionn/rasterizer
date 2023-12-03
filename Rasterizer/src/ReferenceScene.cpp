@@ -38,7 +38,7 @@ namespace dae
 		fireParticle.mesh.worldMatrix = Matrix::CreateScale(5.0f, 5.0f, 5.0f) * Matrix::CreateTranslation(0.0f, 10.0f, 50.0f);
 
 		auto pUnlitShader = std::make_shared<UnlitShader>();
-		pUnlitShader->SetDiffuseTexture("Resources/fire_particle.png");
+		pUnlitShader->SetDiffuseTexture("Resources/fire_diffuse.png");
 		pUnlitShader->SetAlphaClipping(0.05f);
 
 		fireParticle.pShader = pUnlitShader;
