@@ -18,6 +18,7 @@ namespace dae
 		Shader(Shader&&)					= delete;
 		Shader& operator=(Shader&&)			= delete;
 
+		virtual bool CanShade(Vertex_Out& vertex) const { return true; };
 		virtual ColorRGB Shade(Vertex_Out& vertex) const = 0;
 	};
 }

@@ -11,11 +11,14 @@
     <ClInclude Include="src\ShadableObject.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="src\OpaqueShader.h">
+    <ClInclude Include="src\LitShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
     <ClInclude Include="src\ReferenceScene.h">
       <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UnlitShader.h">
+      <Filter>Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -24,11 +27,14 @@
     <ClCompile Include="src\Scene.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="src\OpaqueShader.cpp">
+    <ClCompile Include="src\LitShader.cpp">
       <Filter>Shaders</Filter>
     </ClCompile>
     <ClCompile Include="src\ReferenceScene.cpp">
       <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UnlitShader.cpp">
+      <Filter>Shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

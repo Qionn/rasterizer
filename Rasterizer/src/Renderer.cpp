@@ -51,6 +51,8 @@ namespace dae
 					RasterizeTriangleStrip(object.mesh);
 					break;
 			}
+
+			m_pCurrentShader = nullptr;
 		}
 
 		//@END
@@ -194,6 +196,19 @@ namespace dae
 				// Frustum culling
 				if (depthZ < 0.0f || depthZ > 1.0f) continue;
 
+				// Interpolate depth W value using weights
+				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
+
+				// Construct pixel vertex
+				pixelVertex.position		= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
+				pixelVertex.color			= v0.color * w0 + v1.color * w1 + v2.color * w2;
+				pixelVertex.normal			= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
+				pixelVertex.tangent			= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
+				pixelVertex.viewDirection	= (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
+				pixelVertex.uv				= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
+
+				if (!m_pCurrentShader->CanShade(pixelVertex)) continue;
+
 				// Calculate pixel index
 				pixelIndex = px + py * m_Width;
 				assert(pixelIndex >= 0 && pixelIndex < m_Width * m_Height && "buffer index out of bounds");
@@ -202,16 +217,6 @@ namespace dae
 				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
 
 				m_pDepthBufferPixels[pixelIndex] = depthZ;
-
-				// Interpolate depth W value using weights
-				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
-
-				pixelVertex.position		= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
-				pixelVertex.color			= v0.color * w0 + v1.color * w1 + v2.color * w2;
-				pixelVertex.normal			= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
-				pixelVertex.tangent			= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
-				pixelVertex.viewDirection	= (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
-				pixelVertex.uv				= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
 
 				color = m_pCurrentShader->Shade(pixelVertex);
 

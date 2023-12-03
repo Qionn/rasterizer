@@ -9,16 +9,16 @@
 
 namespace dae
 {
-	class OpaqueShader final : public Shader
+	class LitShader final : public Shader
 	{
 	public:
-		OpaqueShader() = default;
-		~OpaqueShader() = default;
+		LitShader() = default;
+		~LitShader() = default;
 
-		OpaqueShader(const OpaqueShader&)				= delete;
-		OpaqueShader& operator=(const OpaqueShader&)	= delete;
-		OpaqueShader(OpaqueShader&&)					= delete;
-		OpaqueShader& operator=(OpaqueShader&&)			= delete;
+		LitShader(const LitShader&)				= delete;
+		LitShader& operator=(const LitShader&)	= delete;
+		LitShader(LitShader&&)					= delete;
+		LitShader& operator=(LitShader&&)			= delete;
 
 		ColorRGB Shade(Vertex_Out& vertex) const override;
 

@@ -20,5 +20,7 @@ namespace dae
 
 	private:
 		ShadableObject* m_pSpaceScooter{ nullptr };
+		ShadableObject* m_pFireParticle1{ nullptr };
+		ShadableObject* m_pFireParticle2{ nullptr };
 	};
 }

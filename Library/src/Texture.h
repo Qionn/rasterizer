@@ -15,14 +15,19 @@ namespace dae
 		~Texture();
 
 		static std::unique_ptr<Texture> LoadFromFile(const std::string& path);
-		ColorRGB Sample(const Vector2& uv) const;
-		Vector3 SampleNormal(const Vector2& uv) const;
+
+		ColorRGB SampleColor(const Vector2& uv) const;
 		float SampleGray(const Vector2& uv) const;
+		float SampleAlpha(const Vector2& uv) const;
+		Vector3 SampleNormal(const Vector2& uv) const;
 
 	private:
 		Texture(SDL_Surface* pSurface);
 
 		SDL_Surface* m_pSurface{ nullptr };
 		uint32_t* m_pSurfacePixels{ nullptr };
+
+	private:
+		bool SampleHelper(const Vector2& uv, float& r, float& g, float& b, float& a) const;
 	};
 }

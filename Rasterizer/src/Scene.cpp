@@ -20,12 +20,12 @@ namespace dae
 		return &m_ShadableObjects.back();
 	}
 
-	std::vector<ShadableObject>& Scene::GetShadableObjects()
+	std::list<ShadableObject>& Scene::GetShadableObjects()
 	{
 		return m_ShadableObjects;
 	}
 
-	const std::vector<ShadableObject>& Scene::GetShadableObjects() const
+	const std::list<ShadableObject>& Scene::GetShadableObjects() const
 	{
 		return m_ShadableObjects;
 	}

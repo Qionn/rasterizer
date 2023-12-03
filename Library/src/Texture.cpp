@@ -4,10 +4,11 @@
 
 namespace dae
 {
-	Texture::Texture(SDL_Surface* pSurface) :
-		m_pSurface{ pSurface },
-		m_pSurfacePixels{ (uint32_t*)pSurface->pixels }
+	Texture::Texture(SDL_Surface* pSurface)
+		: m_pSurface{ pSurface }
+		, m_pSurfacePixels{ (uint32_t*)pSurface->pixels }
 	{
+
 	}
 
 	Texture::~Texture()
@@ -25,38 +26,59 @@ namespace dae
 		return std::unique_ptr<Texture>{ new Texture(pSurface) };
 	}
 
-	ColorRGB Texture::Sample(const Vector2& uv) const
+	ColorRGB Texture::SampleColor(const Vector2& uv) const
 	{
-		if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) return colors::Black;
+		float alpha;
+		ColorRGB color{ colors::Black };
 
-		auto px = static_cast<Uint32>(uv.x * m_pSurface->w);
-		auto py = static_cast<Uint32>(uv.y * m_pSurface->h);
+		SampleHelper(uv, color.r, color.g, color.b, alpha);
 
-		Uint8 r, g, b;
-		SDL_GetRGB(m_pSurfacePixels[px + py * m_pSurface->w], m_pSurface->format, &r, &g, &b);
-
-		return {
-			r / 255.0f,
-			g / 255.0f,
-			b / 255.0f
-		};
-	}
-
-	Vector3 Texture::SampleNormal(const Vector2& uv) const
-	{
-		ColorRGB sample = Sample(uv);
-
-		return {
-			2 * sample.r - 1,
-			2 * sample.g - 1,
-			2 * sample.b - 1
-		};
+		return color;
 	}
 
 	float Texture::SampleGray(const Vector2& uv) const
 	{
-		ColorRGB sample = Sample(uv);
-		return sample.r;
+		float r, g, b, a;
+		SampleHelper(uv, r, g, b, a);
+		return r;
 	}
 
+	float Texture::SampleAlpha(const Vector2& uv) const
+	{
+		float r, g, b, a;
+		SampleHelper(uv, r, g, b, a);
+		return a;
+	}
+
+	Vector3 Texture::SampleNormal(const Vector2& uv) const
+	{
+		float r, g, b, a;
+		if (!SampleHelper(uv, r, g, b, a)) return Vector3::UnitZ;
+
+		return {
+			2.0f * r - 1.0f,
+			2.0f * g - 1.0f,
+			2.0f * b - 1.0f
+		};
+	}
+
+	bool Texture::SampleHelper(const Vector2& uv, float& r, float& g, float& b, float& a) const
+	{
+		r = g = b = a = 0.0f;
+
+		if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) return false;
+
+		auto px = static_cast<Uint32>(uv.x * m_pSurface->w);
+		auto py = static_cast<Uint32>(uv.y * m_pSurface->h);
+
+		Uint8 red, green, blue, alpha;
+		SDL_GetRGBA(m_pSurfacePixels[px + py * m_pSurface->w], m_pSurface->format, &red, &green, &blue, &alpha);
+
+		r = red / 255.0f;
+		g = green / 255.0f;
+		b = blue / 255.0f;
+		a = alpha / 255.0f;
+
+		return true;
+	}
 }

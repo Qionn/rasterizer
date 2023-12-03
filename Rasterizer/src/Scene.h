@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <list>
 
 #include "Camera.h"
 #include "Timer.h"
@@ -24,14 +24,14 @@ namespace dae
 
 		ShadableObject* AddShadableObject(ShadableObject shadableObject);
 
-		std::vector<ShadableObject>& GetShadableObjects();
-		const std::vector<ShadableObject>& GetShadableObjects() const;
+		std::list<ShadableObject>& GetShadableObjects();
+		const std::list<ShadableObject>& GetShadableObjects() const;
 
 		Camera& GetCamera();
 		const Camera& GetCamera() const;
 
 	private:
-		std::vector<ShadableObject> m_ShadableObjects;
+		std::list<ShadableObject> m_ShadableObjects;
 		Camera m_Camera;
 	};
 }

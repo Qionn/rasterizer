@@ -1,10 +1,10 @@
-#include "OpaqueShader.h"
+#include "LitShader.h"
 
 #include "DataTypes.h"
 
 namespace dae
 {
-	ColorRGB OpaqueShader::Shade(Vertex_Out& vertex) const
+	ColorRGB LitShader::Shade(Vertex_Out& vertex) const
 	{
 		Vector3 normal = vertex.normal;
 
@@ -19,7 +19,7 @@ namespace dae
 
 		if (m_pDiffuseTexture != nullptr)
 		{
-			color = m_pDiffuseTexture->Sample(vertex.uv);
+			color = m_pDiffuseTexture->SampleColor(vertex.uv);
 		}
 
 		if (m_pGlossTexture != nullptr && m_pSpecularTexture != nullptr)
@@ -39,22 +39,22 @@ namespace dae
 		return color;
 	}
 
-	void OpaqueShader::SetDiffuseTexture(const std::string& texturePath)
+	void LitShader::SetDiffuseTexture(const std::string& texturePath)
 	{
 		m_pDiffuseTexture = Texture::LoadFromFile(texturePath);
 	}
 
-	void OpaqueShader::SetNormalTexture(const std::string& texturePath)
+	void LitShader::SetNormalTexture(const std::string& texturePath)
 	{
 		m_pNormalTexture = Texture::LoadFromFile(texturePath);
 	}
 
-	void OpaqueShader::SetGlossTexture(const std::string& texturePath)
+	void LitShader::SetGlossTexture(const std::string& texturePath)
 	{
 		m_pGlossTexture = Texture::LoadFromFile(texturePath);
 	}
 
-	void OpaqueShader::SetSpecularTexture(const std::string& texturePath)
+	void LitShader::SetSpecularTexture(const std::string& texturePath)
 	{
 		m_pSpecularTexture = Texture::LoadFromFile(texturePath);
 	}
