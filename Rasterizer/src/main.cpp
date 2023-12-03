@@ -10,6 +10,9 @@
 #include "Timer.h"
 #include "Renderer.h"
 
+//Scen includes
+#include "ReferenceScene.h"
+
 using namespace dae;
 
 void ShutDown(SDL_Window* pWindow)
@@ -42,6 +45,9 @@ int main(int argc, char* args[])
 	//Initialize "framework"
 	const auto pTimer = new Timer();
 	const auto pRenderer = new Renderer(pWindow);
+	const auto pScene = new ReferenceScene();
+
+	pScene->Initialize();
 
 	//Start loop
 	pTimer->Start();
@@ -63,23 +69,12 @@ int main(int argc, char* args[])
 			case SDL_QUIT:
 				isLooping = false;
 				break;
+
 			case SDL_KEYUP:
 				switch (e.key.keysym.scancode)
 				{
 					case SDL_SCANCODE_X:
 						takeScreenshot = true;
-						break;
-
-					case SDL_SCANCODE_Z:
-						pRenderer->ToggleDebugDepthBuffer();
-						break;
-
-					case SDL_SCANCODE_R:
-						pRenderer->ToggleDebugRotation();
-						break;
-
-					case SDL_SCANCODE_N:
-						pRenderer->ToggleNormalMapping();
 						break;
 				}
 				break;
@@ -87,10 +82,11 @@ int main(int argc, char* args[])
 		}
 
 		//--------- Update ---------
+		pScene->Update(pTimer);
 		pRenderer->Update(pTimer);
 
 		//--------- Render ---------
-		pRenderer->Render();
+		pRenderer->Render(pScene);
 
 		//--------- Timer ---------
 		pTimer->Update();

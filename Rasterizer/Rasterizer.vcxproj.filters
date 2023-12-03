@@ -2,14 +2,44 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\Scene.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Shader.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ShadableObject.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="src\OpaqueShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ReferenceScene.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
+    <ClCompile Include="src\Scene.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\OpaqueShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ReferenceScene.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Misc">
       <UniqueIdentifier>{f7261186-da77-45fd-b82b-18b1f4e4aa21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scenes">
+      <UniqueIdentifier>{b2298da3-2617-4903-8821-73c3194672df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{fb4c36a1-4c58-47a6-93c4-0c466e52b6b4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

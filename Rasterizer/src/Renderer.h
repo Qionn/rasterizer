@@ -19,6 +19,7 @@ namespace dae
 	struct Vertex_Out;
 	class Timer;
 	class Scene;
+	class Shader;
 
 	class Renderer final
 	{
@@ -32,12 +33,9 @@ namespace dae
 		Renderer& operator=(Renderer&&) noexcept = delete;
 
 		void Update(Timer* pTimer);
-		void Render();
+		void Render(Scene* pScene);
 
 		bool SaveBufferToImage() const;
-		void ToggleDebugDepthBuffer();
-		void ToggleDebugRotation();
-		void ToggleNormalMapping();
 
 		void VertexTransformationFunction(Mesh& mesh) const;
 
@@ -52,30 +50,15 @@ namespace dae
 
 		Camera m_Camera{};
 
-		Vector3 m_GlobalLightDirection{ 0.577f, -0.577f, 0.577f };
-		float m_Shininess{ 25.0f };
-
-		// ==== DEBUG MESH ====
-		Mesh m_TestMesh{};
-		std::unique_ptr<Texture> m_pTestAlbedoTexture;
-		std::unique_ptr<Texture> m_pTestNormalTexture;
-		std::unique_ptr<Texture> m_pTestGlossTexture;
-		std::unique_ptr<Texture> m_pTestSpecularTexture;
-		bool m_RotateTestMesh{ false };
-		// ====================
-
 		int m_Width{};
 		int m_Height{};
 		float m_AspectRatio{};
 
-		bool m_DebugDepthBuffer{};
-		bool m_NormalMapping{ true };
+		Shader* m_pCurrentShader{ nullptr };
 
 	private:
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
 		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
-
-		void ShadePixel(int pixelIndex, const Vertex_Out& v) const;
 	};
 }

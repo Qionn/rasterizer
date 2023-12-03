@@ -7,6 +7,7 @@
 #include "Maths.h"
 #include "Texture.h"
 #include "Utils.h"
+#include "Scene.h"
 
 namespace dae
 {
@@ -27,16 +28,6 @@ namespace dae
 		//Initialize Camera
 		m_Camera.Initialize(m_AspectRatio, 45.f, { 0.0f, 0.0f, 0.f });
 		m_Camera.walkSpeed = 30.0f;
-		
-		// Initialize test mesh & texture(s)
-		Utils::ParseOBJ("Resources/vehicle.obj", m_TestMesh.vertices, m_TestMesh.indices);
-		m_TestMesh.primitiveTopology = PrimitiveTopology::TriangleList;
-		m_TestMesh.worldMatrix = Matrix::CreateTranslation(0.0f, 0.0f, 50.0f);
-
-		m_pTestAlbedoTexture	= Texture::LoadFromFile("Resources/vehicle_diffuse.png");
-		m_pTestNormalTexture	= Texture::LoadFromFile("Resources/vehicle_normal.png");
-		m_pTestGlossTexture		= Texture::LoadFromFile("Resources/vehicle_gloss.png");
-		m_pTestSpecularTexture	= Texture::LoadFromFile("Resources/vehicle_specular.png");
 	}
 
 	Renderer::~Renderer()
@@ -47,15 +38,9 @@ namespace dae
 	void Renderer::Update(Timer* pTimer)
 	{
 		m_Camera.Update(pTimer);
-
-		if (m_RotateTestMesh)
-		{
-			const float rotationSpeed = 1.0f;
-			m_TestMesh.worldMatrix = Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed()) * m_TestMesh.worldMatrix;
-		}
 	}
 
-	void Renderer::Render()
+	void Renderer::Render(Scene* pScene)
 	{
 		//@START
 		std::fill_n(m_pDepthBufferPixels.get(), m_Width * m_Height, FLT_MAX);
@@ -64,18 +49,22 @@ namespace dae
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
 
-		// Render Test mesh
-		VertexTransformationFunction(m_TestMesh);
-
-		switch (m_TestMesh.primitiveTopology)
+		for (ShadableObject& object : pScene->GetShadableObjects())
 		{
-		case PrimitiveTopology::TriangleList:
-			RasterizeTriangleList(m_TestMesh);
-			break;
+			m_pCurrentShader = object.pShader.get();
 
-		case PrimitiveTopology::TriangleStrip:
-			RasterizeTriangleStrip(m_TestMesh);
-			break;
+			VertexTransformationFunction(object.mesh);
+
+			switch (object.mesh.primitiveTopology)
+			{
+				case PrimitiveTopology::TriangleList:
+					RasterizeTriangleList(object.mesh);
+					break;
+
+				case PrimitiveTopology::TriangleStrip:
+					RasterizeTriangleStrip(object.mesh);
+					break;
+			}
 		}
 
 		//@END
@@ -126,21 +115,6 @@ namespace dae
 		return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 	}
 
-	void Renderer::ToggleDebugDepthBuffer()
-	{
-		m_DebugDepthBuffer = !m_DebugDepthBuffer;
-	}
-
-	void Renderer::ToggleDebugRotation()
-	{
-		m_RotateTestMesh = !m_RotateTestMesh;
-	}
-
-	void Renderer::ToggleNormalMapping()
-	{
-		m_NormalMapping = !m_NormalMapping;
-	}
-
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)
 	{
 		for (size_t i = 2; i < mesh.indices.size(); ++i)
@@ -173,6 +147,7 @@ namespace dae
 
 	void Renderer::RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2)
 	{
+		if (m_pCurrentShader == nullptr) return;
 		if (v0.position.w < 0.0f || v1.position.w < 0.0f || v2.position.w < 0.0f) return;
 
 		// Find triangle bounding box
@@ -200,6 +175,7 @@ namespace dae
 		float depthZ, depthW;
 
 		Vertex_Out pixelVertex;
+		ColorRGB color;
 
 		for (int py = boxTop; py < boxBottom; ++py)
 		{
@@ -246,56 +222,15 @@ namespace dae
 				pixelVertex.viewDirection	= (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
 				pixelVertex.uv				= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
 
-				ShadePixel(pixelIndex, pixelVertex);
+				color = m_pCurrentShader->Shade(pixelVertex);
+
+				m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
+					m_pBackBuffer->format,
+					static_cast<uint8_t>(color.r * 255),
+					static_cast<uint8_t>(color.g * 255),
+					static_cast<uint8_t>(color.b * 255)
+				);
 			}
 		}
-	}
-
-	void Renderer::ShadePixel(int pixelIndex, const Vertex_Out& v) const
-	{
-		ColorRGB color = v.color;
-		Vector3 normal = v.normal;
-
-		if (m_NormalMapping && m_pTestNormalTexture != nullptr)
-		{
-			Vector3 binoral = Vector3::Cross(v.normal, v.tangent);
-			Matrix tangentSpaceMatrix = Matrix{ v.tangent, binoral, v.normal, Vector3::Zero };
-			normal = tangentSpaceMatrix.TransformVector(m_pTestNormalTexture->SampleNormal(v.uv));
-		}
-
-		float observedArea = std::max(Vector3::Dot(-m_GlobalLightDirection, normal), 0.0f);
-
-		if (m_DebugDepthBuffer)
-		{
-			color.r = color.g = color.b = v.position.z;
-		}
-		else
-		{
-			if (m_pTestAlbedoTexture != nullptr)
-			{
-				color = m_pTestAlbedoTexture->Sample(v.uv);
-			}
-
-			if (m_pTestGlossTexture != nullptr && m_pTestSpecularTexture != nullptr)
-			{
-				float cosa = Vector3::Dot(Vector3::Reflect(-m_GlobalLightDirection, normal), v.viewDirection);
-				if (cosa > 0.0f)
-				{
-					float phong = m_pTestSpecularTexture->SampleGray(v.uv) * std::pow(cosa, m_pTestGlossTexture->SampleGray(v.uv) * m_Shininess);
-					color += { phong, phong, phong };
-				}
-			}
-
-			color *= observedArea;
-		}
-
-		color.MaxToOne();
-
-		m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
-			m_pBackBuffer->format,
-			static_cast<uint8_t>(color.r * 255),
-			static_cast<uint8_t>(color.g * 255),
-			static_cast<uint8_t>(color.b * 255)
-		);
 	}
 }
