@@ -25,19 +25,17 @@ namespace dae
 	{
 	public:
 		Renderer(SDL_Window* pWindow);
-		~Renderer();
+		~Renderer() = default;
 
 		Renderer(const Renderer&) = delete;
 		Renderer(Renderer&&) noexcept = delete;
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer& operator=(Renderer&&) noexcept = delete;
 
-		void Update(Timer* pTimer);
 		void Render(Scene* pScene);
 
 		bool SaveBufferToImage() const;
-
-		void VertexTransformationFunction(Mesh& mesh) const;
+		float GetAspectRatio() const;
 
 	private:
 		SDL_Window* m_pWindow{};
@@ -48,8 +46,6 @@ namespace dae
 
 		std::unique_ptr<float[]> m_pDepthBufferPixels{};
 
-		Camera m_Camera{};
-
 		int m_Width{};
 		int m_Height{};
 		float m_AspectRatio{};
@@ -57,6 +53,8 @@ namespace dae
 		Shader* m_pCurrentShader{ nullptr };
 
 	private:
+		void VertexTransformationFunction(const Camera& camera, Mesh& mesh) const;
+
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
 		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);

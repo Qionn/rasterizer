@@ -15,7 +15,7 @@ namespace dae
 		ReferenceScene(ReferenceScene&&)					= delete;
 		ReferenceScene& operator=(ReferenceScene&&)			= delete;
 
-		void Initialize() override;
+		void Initialize(float aspectRatio) override;
 		void Update(Timer* pTimer) override;
 
 	private:

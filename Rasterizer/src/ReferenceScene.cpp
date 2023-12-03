@@ -4,8 +4,14 @@
 
 namespace dae
 {
-	void ReferenceScene::Initialize()
+	void ReferenceScene::Initialize(float aspectRatio)
 	{
+		// Initialize camera
+		Camera& camera = GetCamera();
+		camera.Initialize(aspectRatio, 45.0f);
+		camera.walkSpeed = 30.0f;
+
+		// Create space scooter
 		ShadableObject spaceScooter{};
 
 		Utils::ParseOBJ("Resources/vehicle.obj", spaceScooter.mesh.vertices, spaceScooter.mesh.indices);
@@ -26,6 +32,8 @@ namespace dae
 
 	void ReferenceScene::Update(Timer* pTimer)
 	{
+		Scene::Update(pTimer);
+
 		const float rotationSpeed = 1.0f;
 		m_pSpaceScooter->mesh.worldMatrix = Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed()) * m_pSpaceScooter->mesh.worldMatrix;
 	}

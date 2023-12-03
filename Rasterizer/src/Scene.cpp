@@ -4,9 +4,14 @@
 
 namespace dae
 {
-	void Scene::Initialize()
+	void Scene::Initialize(float aspectRatio)
 	{
+		m_Camera.Initialize(aspectRatio);
+	}
 
+	void Scene::Update(Timer* pTimer)
+	{
+		m_Camera.Update(pTimer);
 	}
 
 	ShadableObject* Scene::AddShadableObject(ShadableObject shadableObject)
@@ -23,6 +28,16 @@ namespace dae
 	const std::vector<ShadableObject>& Scene::GetShadableObjects() const
 	{
 		return m_ShadableObjects;
+	}
+
+	Camera& Scene::GetCamera()
+	{
+		return m_Camera;
+	}
+
+	const Camera& Scene::GetCamera() const
+	{
+		return m_Camera;
 	}
 
 }

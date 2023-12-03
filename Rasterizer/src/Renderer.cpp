@@ -24,20 +24,6 @@ namespace dae
 		m_pBackBufferPixels = (uint32_t*)m_pBackBuffer->pixels;
 
 		m_pDepthBufferPixels = std::make_unique<float[]>(m_Width * m_Height);
-
-		//Initialize Camera
-		m_Camera.Initialize(m_AspectRatio, 45.f, { 0.0f, 0.0f, 0.f });
-		m_Camera.walkSpeed = 30.0f;
-	}
-
-	Renderer::~Renderer()
-	{
-		//delete[] m_pDepthBufferPixels;
-	}
-
-	void Renderer::Update(Timer* pTimer)
-	{
-		m_Camera.Update(pTimer);
 	}
 
 	void Renderer::Render(Scene* pScene)
@@ -53,7 +39,7 @@ namespace dae
 		{
 			m_pCurrentShader = object.pShader.get();
 
-			VertexTransformationFunction(object.mesh);
+			VertexTransformationFunction(pScene->GetCamera(), object.mesh);
 
 			switch (object.mesh.primitiveTopology)
 			{
@@ -74,12 +60,22 @@ namespace dae
 		SDL_UpdateWindowSurface(m_pWindow);
 	}
 
-	void Renderer::VertexTransformationFunction(Mesh& mesh) const
+	bool Renderer::SaveBufferToImage() const
+	{
+		return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
+	}
+
+	float Renderer::GetAspectRatio() const
+	{
+		return m_AspectRatio;
+	}
+
+	void Renderer::VertexTransformationFunction(const Camera& camera, Mesh& mesh) const
 	{
 		const auto& verticesIn = mesh.vertices;
 		auto& verticesOut = mesh.vertices_out;
 
-		Matrix wvp = mesh.worldMatrix * m_Camera.viewMatrix * m_Camera.projectionMatrix;
+		Matrix wvp = mesh.worldMatrix * camera.viewMatrix * camera.projectionMatrix;
 
 		verticesOut.resize(verticesIn.size());
 
@@ -88,16 +84,16 @@ namespace dae
 			Vertex_Out& vertex = verticesOut[i];
 
 			// Convert Vertex to Vertex_Out
-			vertex.position	= { verticesIn[i].position, 0.0f };
-			vertex.color	= verticesIn[i].color;
-			vertex.uv		= verticesIn[i].uv;
-			vertex.normal	= mesh.worldMatrix.TransformVector(verticesIn[i].normal);
-			vertex.tangent	= mesh.worldMatrix.TransformVector(verticesIn[i].tangent);
+			vertex.position = { verticesIn[i].position, 0.0f };
+			vertex.color = verticesIn[i].color;
+			vertex.uv = verticesIn[i].uv;
+			vertex.normal = mesh.worldMatrix.TransformVector(verticesIn[i].normal);
+			vertex.tangent = mesh.worldMatrix.TransformVector(verticesIn[i].tangent);
 
 			vertex.position = wvp.TransformPoint(vertex.position);
 
 			Vector3 worldPosition = mesh.worldMatrix.TransformPoint(vertex.position);
-			vertex.viewDirection = (worldPosition - m_Camera.origin).Normalized();
+			vertex.viewDirection = (worldPosition - camera.origin).Normalized();
 
 			// Perspective divide
 			vertex.position.x /= vertex.position.w;
@@ -108,11 +104,6 @@ namespace dae
 			vertex.position.x = (vertex.position.x + 1) * 0.5f * m_Width;
 			vertex.position.y = (1 - vertex.position.y) * 0.5f * m_Height;
 		}
-	}
-
-	bool Renderer::SaveBufferToImage() const
-	{
-		return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
 	}
 
 	void Renderer::RasterizeTriangleStrip(const Mesh& mesh)

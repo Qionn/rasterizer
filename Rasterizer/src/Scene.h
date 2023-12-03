@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "Camera.h"
 #include "Timer.h"
 #include "ShadableObject.h"
 
@@ -18,15 +19,19 @@ namespace dae
 		Scene(Scene&&)					= delete;
 		Scene& operator=(Scene&&)		= delete;
 
-		virtual void Initialize() = 0;
-		virtual void Update(Timer* pTimer) = 0;
+		virtual void Initialize(float aspectRatio);
+		virtual void Update(Timer* pTimer);
 
 		ShadableObject* AddShadableObject(ShadableObject shadableObject);
 
 		std::vector<ShadableObject>& GetShadableObjects();
 		const std::vector<ShadableObject>& GetShadableObjects() const;
 
+		Camera& GetCamera();
+		const Camera& GetCamera() const;
+
 	private:
 		std::vector<ShadableObject> m_ShadableObjects;
+		Camera m_Camera;
 	};
 }

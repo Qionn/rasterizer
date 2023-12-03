@@ -47,7 +47,7 @@ int main(int argc, char* args[])
 	const auto pRenderer = new Renderer(pWindow);
 	const auto pScene = new ReferenceScene();
 
-	pScene->Initialize();
+	pScene->Initialize(pRenderer->GetAspectRatio());
 
 	//Start loop
 	pTimer->Start();
@@ -83,7 +83,6 @@ int main(int argc, char* args[])
 
 		//--------- Update ---------
 		pScene->Update(pTimer);
-		pRenderer->Update(pTimer);
 
 		//--------- Render ---------
 		pRenderer->Render(pScene);
