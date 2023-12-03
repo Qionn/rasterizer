@@ -10,6 +10,6 @@ namespace dae
 	struct ShadableObject
 	{
 		Mesh mesh;
-		std::unique_ptr<Shader> pShader;
+		std::shared_ptr<Shader> pShader;
 	};
 }

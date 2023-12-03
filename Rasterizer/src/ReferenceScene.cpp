@@ -12,16 +12,16 @@ namespace dae
 		spaceScooter.mesh.primitiveTopology = PrimitiveTopology::TriangleList;
 		spaceScooter.mesh.worldMatrix = Matrix::CreateTranslation(0.0f, 0.0f, 50.0f);
 
-		auto pShader = std::make_unique<OpaqueShader>();
+		auto pShader = std::make_shared<OpaqueShader>();
 
 		pShader->SetDiffuseTexture("Resources/vehicle_diffuse.png");
 		pShader->SetNormalTexture("Resources/vehicle_normal.png");
 		pShader->SetGlossTexture("Resources/vehicle_gloss.png");
 		pShader->SetSpecularTexture("Resources/vehicle_specular.png");
 
-		spaceScooter.pShader = std::move(pShader);
+		spaceScooter.pShader = pShader;
 
-		m_pSpaceScooter = AddShadableObject(std::move(spaceScooter));
+		m_pSpaceScooter = AddShadableObject(spaceScooter);
 	}
 
 	void ReferenceScene::Update(Timer* pTimer)
