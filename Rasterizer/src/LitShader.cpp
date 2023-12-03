@@ -4,6 +4,16 @@
 
 namespace dae
 {
+	bool LitShader::CanShade(Vertex_Out& vertex) const
+	{
+		if (m_AlphaClipping > 0.0f && m_pDiffuseTexture != nullptr)
+		{
+			return m_pDiffuseTexture->SampleAlpha(vertex.uv) > m_AlphaClipping;
+		}
+
+		return true;
+	}
+
 	ColorRGB LitShader::Shade(Vertex_Out& vertex) const
 	{
 		Vector3 normal = vertex.normal;
@@ -57,6 +67,11 @@ namespace dae
 	void LitShader::SetSpecularTexture(const std::string& texturePath)
 	{
 		m_pSpecularTexture = Texture::LoadFromFile(texturePath);
+	}
+
+	void LitShader::SetAlphaClipping(float clipping)
+	{
+		m_AlphaClipping = clipping;
 	}
 
 }
