@@ -34,7 +34,7 @@ namespace dae
 
 		if (m_pGlossTexture != nullptr && m_pSpecularTexture != nullptr)
 		{
-			float cosa = Vector3::Dot(Vector3::Reflect(-m_GlobalLightDirection, normal), vertex.viewDirection);
+			float cosa = Vector3::Dot(Vector3::Reflect(-m_LightDirection, normal), vertex.viewDirection);
 			if (cosa > 0.0f)
 			{
 				float phong = m_pGlossTexture->SampleGray(vertex.uv) * std::pow(cosa, m_pSpecularTexture->SampleGray(vertex.uv) * m_Shininess);
@@ -43,7 +43,7 @@ namespace dae
 		}
 
 		// Observed Area
-		color *= std::max(Vector3::Dot(-m_GlobalLightDirection, normal), 0.0f);
+		color *= std::max(Vector3::Dot(-m_LightDirection, normal), 0.0f);
 		color.MaxToOne();
 
 		return color;
@@ -67,6 +67,16 @@ namespace dae
 	void LitShader::SetSpecularTexture(const std::string& texturePath)
 	{
 		m_pSpecularTexture = Texture::LoadFromFile(texturePath);
+	}
+
+	void LitShader::SetLightDirection(const Vector3& direction)
+	{
+		m_LightDirection = direction;
+	}
+
+	void LitShader::SetShininess(float shininess)
+	{
+		m_Shininess = shininess;
 	}
 
 	void LitShader::SetAlphaClipping(float clipping)

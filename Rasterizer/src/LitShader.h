@@ -28,6 +28,8 @@ namespace dae
 		void SetGlossTexture(const std::string& texturePath);
 		void SetSpecularTexture(const std::string& texturePath);
 
+		void SetLightDirection(const Vector3& direction);
+		void SetShininess(float shininess);
 		void SetAlphaClipping(float clipping);
 
 	private:
@@ -36,7 +38,7 @@ namespace dae
 		std::unique_ptr<Texture> m_pGlossTexture;
 		std::unique_ptr<Texture> m_pSpecularTexture;
 
-		Vector3 m_GlobalLightDirection{ 0.577f, -0.577f, 0.577f };
+		Vector3 m_LightDirection{ 0.577f, -0.577f, 0.577f };
 		float m_Shininess{ 25.0f };
 		float m_AlphaClipping{ 0.0f };
 	};

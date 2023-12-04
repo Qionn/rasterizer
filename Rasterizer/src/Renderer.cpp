@@ -9,6 +9,9 @@
 #include "Utils.h"
 #include "Scene.h"
 
+#include <execution>
+#include <ranges>
+
 namespace dae
 {
 	Renderer::Renderer(SDL_Window* pWindow) :
@@ -31,6 +34,7 @@ namespace dae
 		//@START
 		std::fill_n(m_pDepthBufferPixels.get(), m_Width * m_Height, FLT_MAX);
 		SDL_FillRect(m_pBackBuffer, nullptr, SDL_MapRGB(m_pBackBuffer->format, 100, 100, 100));
+
 
 		//Lock BackBuffer
 		SDL_LockSurface(m_pBackBuffer);
@@ -196,19 +200,6 @@ namespace dae
 				// Frustum culling
 				if (depthZ < 0.0f || depthZ > 1.0f) continue;
 
-				// Interpolate depth W value using weights
-				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
-
-				// Construct pixel vertex
-				pixelVertex.position		= { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
-				pixelVertex.color			= v0.color * w0 + v1.color * w1 + v2.color * w2;
-				pixelVertex.normal			= (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
-				pixelVertex.tangent			= (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
-				pixelVertex.viewDirection	= (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
-				pixelVertex.uv				= (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
-
-				if (!m_pCurrentShader->CanShade(pixelVertex)) continue;
-
 				// Calculate pixel index
 				pixelIndex = px + py * m_Width;
 				assert(pixelIndex >= 0 && pixelIndex < m_Width * m_Height && "buffer index out of bounds");
@@ -216,6 +207,21 @@ namespace dae
 				// Depth test
 				if (depthZ > m_pDepthBufferPixels[pixelIndex]) continue;
 
+				// Interpolate depth W value using weights
+				depthW = 1.0f / (w0 / v0.position.w + w1 / v1.position.w + w2 / v2.position.w);
+
+				// Construct pixel vertex
+				pixelVertex.position = { static_cast<float>(px), static_cast<float>(py), depthZ, depthW };
+				pixelVertex.color = v0.color * w0 + v1.color * w1 + v2.color * w2;
+				pixelVertex.normal = (v0.normal * w0 + v1.normal * w1 + v2.normal * w2).Normalized();
+				pixelVertex.tangent = (v0.tangent * w0 + v1.tangent * w1 + v2.tangent * w2).Normalized();
+				pixelVertex.viewDirection = (v0.viewDirection * w0 + v1.viewDirection * w1 + v2.viewDirection * w2).Normalized();
+				pixelVertex.uv = (v0.uv / v0.position.w * w0 + v1.uv / v1.position.w * w1 + v2.uv / v2.position.w * w2) * depthW;
+
+				// Shade test
+				if (!m_pCurrentShader->CanShade(pixelVertex)) continue;
+
+				// Write depth value
 				m_pDepthBufferPixels[pixelIndex] = depthZ;
 
 				color = m_pCurrentShader->Shade(pixelVertex);
