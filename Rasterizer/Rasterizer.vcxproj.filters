@@ -2,16 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="src\Renderer.h" />
-    <ClInclude Include="src\Scene.h">
-      <Filter>Misc</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Shader.h">
-      <Filter>Misc</Filter>
-    </ClInclude>
     <ClInclude Include="src\ShadableObject.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="src\LitShader.h">
+    <ClInclude Include="src\LambertShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
     <ClInclude Include="src\ReferenceScene.h">
@@ -20,14 +14,17 @@
     <ClInclude Include="src\UnlitShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
+    <ClInclude Include="src\Scene.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Shader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
-    <ClCompile Include="src\Scene.cpp">
-      <Filter>Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="src\LitShader.cpp">
+    <ClCompile Include="src\LambertShader.cpp">
       <Filter>Shaders</Filter>
     </ClCompile>
     <ClCompile Include="src\ReferenceScene.cpp">
@@ -35,6 +32,9 @@
     </ClCompile>
     <ClCompile Include="src\UnlitShader.cpp">
       <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Scene.cpp">
+      <Filter>Scenes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

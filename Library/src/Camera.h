@@ -31,8 +31,8 @@ namespace dae
 		float totalYaw			= 0.0f;
 
 		float aspectRatio		= 1.0f;
-		const float nearPlane	= 1.0f;
-		const float farPlane	= 1000.0f;
+		float nearPlane	= 1.0f;
+		float farPlane	= 100.0f;
 
 		float rotationSpeed		= 0.01f;
 		float walkSpeed			= 10.0f;
@@ -42,9 +42,11 @@ namespace dae
 		Matrix viewMatrix{};
 		Matrix projectionMatrix{};
 
-		void Initialize(float aspectRatio, float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f})
+		void Initialize(float aspectRatio, float near, float far, float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f})
 		{
 			this->aspectRatio = aspectRatio;
+			nearPlane = near;
+			farPlane = far;
 
 			fovAngle = _fovAngle;
 			fov = tanf((fovAngle * TO_RADIANS) / 2.f);

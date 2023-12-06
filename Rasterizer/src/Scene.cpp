@@ -6,7 +6,7 @@ namespace dae
 {
 	void Scene::Initialize(float aspectRatio)
 	{
-		m_Camera.Initialize(aspectRatio);
+		m_Camera.Initialize(aspectRatio, 0.001f, 1000.0f);
 	}
 
 	void Scene::Update(Timer* pTimer)

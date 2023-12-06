@@ -1,5 +1,5 @@
 #include "ReferenceScene.h"
-#include "LitShader.h"
+#include "LambertShader.h"
 #include "UnlitShader.h"
 #include "Utils.h"
 
@@ -9,7 +9,7 @@ namespace dae
 	{
 		// Initialize camera
 		Camera& camera = GetCamera();
-		camera.Initialize(aspectRatio, 45.0f);
+		camera.Initialize(aspectRatio, 0.1f, 100.0f, 45.0f, { 0.0f, 5.0f, -64.0f });
 		camera.walkSpeed = 30.0f;
 
 		// Create space scooter
@@ -17,14 +17,14 @@ namespace dae
 
 		Utils::ParseOBJ("Resources/vehicle.obj", spaceScooter.mesh.vertices, spaceScooter.mesh.indices);
 		spaceScooter.mesh.primitiveTopology = PrimitiveTopology::TriangleList;
-		spaceScooter.mesh.worldMatrix = Matrix::CreateTranslation(0.0f, 0.0f, 50.0f);
 
-		auto pLitShader = std::make_shared<LitShader>();
+		auto pLitShader = std::make_shared<LambertShader>();
 
 		pLitShader->SetDiffuseTexture("Resources/vehicle_diffuse.png");
 		pLitShader->SetNormalTexture("Resources/vehicle_normal.png");
 		pLitShader->SetGlossTexture("Resources/vehicle_gloss.png");
 		pLitShader->SetSpecularTexture("Resources/vehicle_specular.png");
+		pLitShader->SetAmbientLight({ 0.3f, 0.3f, 0.3f });
 
 		spaceScooter.pShader = pLitShader;
 

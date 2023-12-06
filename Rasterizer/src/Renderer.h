@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "DataTypes.h"
 #include "ColorRGB.h"
+#include "Maths.h"
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -44,7 +45,7 @@ namespace dae
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
 
-		std::unique_ptr<float[]> m_pDepthBufferPixels{};
+		std::unique_ptr<float[]> m_pDepthBuffer{};
 
 		int m_Width{};
 		int m_Height{};

@@ -167,7 +167,7 @@ xcopy "$(ProjectDir)Resources\" "$(OutDir)\Resources\" /y /D</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\LitShader.h" />
+    <ClInclude Include="src\LambertShader.h" />
     <ClInclude Include="src\ReferenceScene.h" />
     <ClInclude Include="src\Renderer.h" />
     <ClInclude Include="src\Scene.h" />
@@ -177,7 +177,7 @@ xcopy "$(ProjectDir)Resources\" "$(OutDir)\Resources\" /y /D</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\LitShader.cpp" />
+    <ClCompile Include="src\LambertShader.cpp" />
     <ClCompile Include="src\ReferenceScene.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\Scene.cpp" />
