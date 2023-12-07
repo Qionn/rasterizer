@@ -4,6 +4,9 @@
 
 namespace dae
 {
+	bool LambertShader::s_EnableNormalMapping{ false };
+	LambertShader::Mode LambertShader::s_Mode{ Mode::Combined };
+
 	bool LambertShader::CanShade(Vertex_Out& vertex) const
 	{
 		if (m_AlphaClipping > 0.0f && m_pDiffuseTexture != nullptr)
@@ -19,7 +22,7 @@ namespace dae
 		// Normal calculation
 		Vector3 normal = vertex.normal;
 
-		if (m_pNormalTexture != nullptr)
+		if (s_EnableNormalMapping && m_pNormalTexture != nullptr)
 		{
 			Vector3 binoral = Vector3::Cross(vertex.normal, vertex.tangent);
 			Matrix tangentSpaceMatrix = Matrix{ vertex.tangent, binoral, vertex.normal, Vector3::Zero };
@@ -27,27 +30,43 @@ namespace dae
 		}
 
 		// Diffuse color (lambert)
-		ColorRGB color = vertex.color;
+		ColorRGB color = colors::Black;
 
 		if (m_pDiffuseTexture != nullptr)
 		{
 			color = m_pDiffuseTexture->SampleColor(vertex.uv);
 		}
+		else
+		{
+			color = vertex.color;
+		}
 
 		float lambertian = std::max(Vector3::Dot(-m_LightDirection, normal), 0.0f);
 		ColorRGB lambertianRGB{ lambertian, lambertian, lambertian };
 
-		color *= m_DiffuseReflection / PI * (lambertianRGB + m_AmbientLight);
+		float glossSample = (m_pGlossTexture != nullptr) ? m_pGlossTexture->SampleGray(vertex.uv) : 0.0f;
+		float specularSample = (m_pSpecularTexture != nullptr) ? m_pSpecularTexture->SampleGray(vertex.uv) : 0.0f;
 
-		// Specular reflection (phong)
-		if (m_pGlossTexture != nullptr && m_pSpecularTexture != nullptr)
+		ColorRGB lambert = LambertBRDF(color);
+		ColorRGB specular = SpecularBRDF(glossSample, specularSample, m_LightDirection, vertex.viewDirection, normal);
+
+		switch (s_Mode)
 		{
-			float cosa = Vector3::Dot(Vector3::Reflect(-m_LightDirection, normal), vertex.viewDirection);
-			if (cosa > 0.0f)
-			{
-				float phong = m_pGlossTexture->SampleGray(vertex.uv) * std::pow(cosa, m_pSpecularTexture->SampleGray(vertex.uv) * m_Shininess);
-				color += ColorRGB{ phong, phong, phong };
-			}
+			case Mode::ObservedArea:
+				color = lambertianRGB;
+				break;
+
+			case Mode::Diffuse:
+				color = lambert * lambertianRGB;
+				break;
+
+			case Mode::Specular:
+				color = specular * lambertianRGB;
+				break;
+
+			case Mode::Combined:
+				color = (lambert + specular) * (lambertianRGB + m_AmbientLight);
+				break;
 		}
 
 		color.MaxToOne();
@@ -98,6 +117,51 @@ namespace dae
 	void LambertShader::SetAlphaClipping(float clipping)
 	{
 		m_AlphaClipping = clipping;
+	}
+
+	void LambertShader::ToggleNormalMapping()
+	{
+		s_EnableNormalMapping = !s_EnableNormalMapping;
+	}
+
+	void LambertShader::CycleMode()
+	{
+		switch (s_Mode)
+		{
+			case Mode::ObservedArea:
+				s_Mode = Mode::Diffuse;
+				break;
+
+			case Mode::Diffuse:
+				s_Mode = Mode::Specular;
+				break;
+
+			case Mode::Specular:
+				s_Mode = Mode::Combined;
+				break;
+
+			case Mode::Combined:
+				s_Mode = Mode::ObservedArea;
+				break;
+		}
+	}
+
+	ColorRGB LambertShader::LambertBRDF(const ColorRGB& cd) const
+	{
+		return cd * m_DiffuseReflection / PI;
+	}
+
+	ColorRGB LambertShader::SpecularBRDF(float ks, float exp, const Vector3& l, const Vector3& v, const Vector3& n) const
+	{
+		float cosa = Vector3::Dot(Vector3::Reflect(-m_LightDirection, n), v);
+
+		if (cosa <= 0.0f)
+		{
+			return colors::Black;
+		}
+
+		float phong = ks * std::pow(cosa, exp * m_Shininess);
+		return ColorRGB{ phong, phong, phong };
 	}
 
 }

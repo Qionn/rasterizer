@@ -1,6 +1,7 @@
+#include <SDL.h>
+
 #include "ReferenceScene.h"
 #include "LambertShader.h"
-#include "UnlitShader.h"
 #include "Utils.h"
 
 namespace dae
@@ -29,35 +30,29 @@ namespace dae
 		spaceScooter.pShader = pLitShader;
 
 		m_pSpaceScooter = AddShadableObject(spaceScooter);
-
-		// Create fire particles
-		ShadableObject fireParticle{};
-
-		Utils::ParseOBJ("Resources/quad.obj", fireParticle.mesh.vertices, fireParticle.mesh.indices);
-		fireParticle.mesh.primitiveTopology = PrimitiveTopology::TriangleList;
-		fireParticle.mesh.worldMatrix = Matrix::CreateScale(5.0f, 5.0f, 5.0f) * Matrix::CreateTranslation(0.0f, 10.0f, 50.0f);
-
-		auto pUnlitShader = std::make_shared<UnlitShader>();
-		pUnlitShader->SetDiffuseTexture("Resources/fire_diffuse.png");
-		pUnlitShader->SetAlphaClipping(0.05f);
-
-		fireParticle.pShader = pUnlitShader;
-
-		m_pFireParticle1 = AddShadableObject(fireParticle);
-		m_pFireParticle2 = AddShadableObject(fireParticle);
 	}
 
 	void ReferenceScene::Update(Timer* pTimer)
 	{
 		Scene::Update(pTimer);
 
-		const float rotationSpeed = 1.0f;
-		m_pSpaceScooter->mesh.worldMatrix = Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed()) * m_pSpaceScooter->mesh.worldMatrix;
-
-		const Vector3 particleOffset{ -21.0f, -1.0f, 0.0f };
-		const Vector3 particleAngle{ 0.0f, 90.0f * TO_RADIANS, 120.0f * TO_RADIANS };
-
-		m_pFireParticle1->mesh.worldMatrix = Matrix::CreateRotation(0.0f, 0.0f, particleAngle.z) * Matrix::CreateTranslation(particleOffset) * m_pSpaceScooter->mesh.worldMatrix;
-		m_pFireParticle2->mesh.worldMatrix = Matrix::CreateRotation(particleAngle) * Matrix::CreateTranslation(particleOffset) * m_pSpaceScooter->mesh.worldMatrix;
+		if (m_DebugRotate)
+		{
+			const float rotationSpeed = 1.0f;
+			m_pSpaceScooter->mesh.worldMatrix = Matrix::CreateRotationY(rotationSpeed * pTimer->GetElapsed()) * m_pSpaceScooter->mesh.worldMatrix;
+		}
 	}
+
+	void ReferenceScene::OnEvent(const SDL_Event& e)
+	{
+		if (e.type != SDL_KEYUP) return;
+
+		switch (e.key.keysym.scancode)
+		{
+			case SDL_SCANCODE_F5:
+				m_DebugRotate = !m_DebugRotate;
+				break;
+		}
+	}
+
 }

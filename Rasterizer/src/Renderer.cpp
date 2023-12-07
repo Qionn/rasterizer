@@ -74,6 +74,11 @@ namespace dae
 		return m_AspectRatio;
 	}
 
+	void Renderer::ToggleDebugDepthBuffer()
+	{
+		m_DebugDepthBuffer = !m_DebugDepthBuffer;
+	}
+
 	void Renderer::VertexTransformationFunction(const Camera& camera, Mesh& mesh) const
 	{
 		const auto& verticesIn = mesh.vertices;
@@ -96,7 +101,7 @@ namespace dae
 
 			vertex.position = wvp.TransformPoint(vertex.position);
 
-			Vector3 worldPosition = mesh.worldMatrix.TransformPoint(vertex.position);
+			Vector3 worldPosition = mesh.worldMatrix.TransformPoint(verticesIn[i].position);
 			vertex.viewDirection = (worldPosition - camera.origin).Normalized();
 
 			// Perspective divide
@@ -222,7 +227,14 @@ namespace dae
 				// Write depth value
 				m_pDepthBuffer[pixelIndex] = depthZ;
 		
-				color = m_pCurrentShader->Shade(pixelVertex);
+				if (m_DebugDepthBuffer)
+				{
+					color.r = color.g = color.b = RemapDepth(depthZ, 0.985f, 1.0f);
+				}
+				else
+				{
+					color = m_pCurrentShader->Shade(pixelVertex);
+				}
 		
 				m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(
 					m_pBackBuffer->format,
@@ -233,4 +245,10 @@ namespace dae
 			}
 		}
 	}
+
+	float Renderer::RemapDepth(float value, float min, float max)
+	{
+		return (value - min) / (max - min);
+	}
+
 }

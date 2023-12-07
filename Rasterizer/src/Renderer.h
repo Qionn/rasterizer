@@ -38,6 +38,8 @@ namespace dae
 		bool SaveBufferToImage() const;
 		float GetAspectRatio() const;
 
+		void ToggleDebugDepthBuffer();
+
 	private:
 		SDL_Window* m_pWindow{};
 
@@ -51,6 +53,8 @@ namespace dae
 		int m_Height{};
 		float m_AspectRatio{};
 
+		bool m_DebugDepthBuffer{};
+
 		Shader* m_pCurrentShader{ nullptr };
 
 	private:
@@ -59,5 +63,7 @@ namespace dae
 		void RasterizeTriangleStrip(const Mesh& mesh);
 		void RasterizeTriangleList(const Mesh& mesh);
 		void RasterizeTriangle(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2);
+
+		float RemapDepth(float value, float min, float max);
 	};
 }

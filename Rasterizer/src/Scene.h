@@ -6,6 +6,8 @@
 #include "Timer.h"
 #include "ShadableObject.h"
 
+union SDL_Event;
+
 namespace dae
 {
 	class Scene
@@ -21,6 +23,7 @@ namespace dae
 
 		virtual void Initialize(float aspectRatio);
 		virtual void Update(Timer* pTimer);
+		virtual void OnEvent(const SDL_Event& e);
 
 		ShadableObject* AddShadableObject(ShadableObject shadableObject);
 

@@ -17,10 +17,11 @@ namespace dae
 
 		void Initialize(float aspectRatio) override;
 		void Update(Timer* pTimer) override;
+		void OnEvent(const SDL_Event& e) override;
 
 	private:
 		ShadableObject* m_pSpaceScooter{ nullptr };
-		ShadableObject* m_pFireParticle1{ nullptr };
-		ShadableObject* m_pFireParticle2{ nullptr };
+
+		bool m_DebugRotate{};
 	};
 }

@@ -14,6 +14,11 @@ namespace dae
 		m_Camera.Update(pTimer);
 	}
 
+	void Scene::OnEvent(const SDL_Event&)
+	{
+
+	}
+
 	ShadableObject* Scene::AddShadableObject(ShadableObject shadableObject)
 	{
 		m_ShadableObjects.emplace_back(std::move(shadableObject));

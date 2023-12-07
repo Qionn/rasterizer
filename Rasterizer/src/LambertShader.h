@@ -12,6 +12,15 @@ namespace dae
 	class LambertShader final : public Shader
 	{
 	public:
+		enum class Mode
+		{
+			ObservedArea,
+			Diffuse,
+			Specular,
+			Combined
+		};
+
+	public:
 		LambertShader() = default;
 		~LambertShader() = default;
 
@@ -34,6 +43,9 @@ namespace dae
 		void SetShininess(float shininess);
 		void SetAlphaClipping(float clipping);
 
+		static void ToggleNormalMapping();
+		static void CycleMode();
+
 	private:
 		std::unique_ptr<Texture> m_pDiffuseTexture;
 		std::unique_ptr<Texture> m_pNormalTexture;
@@ -45,5 +57,14 @@ namespace dae
 		float m_DiffuseReflection{ 7.0f };
 		float m_Shininess{ 25.0f };
 		float m_AlphaClipping{ 0.0f };
+
+		// === DEBUG VARIABLES ===
+		static bool s_EnableNormalMapping;
+		static Mode s_Mode;
+		// =======================
+
+	private:
+		ColorRGB LambertBRDF(const ColorRGB& cd) const;
+		ColorRGB SpecularBRDF(float ks, float exp, const Vector3& l, const Vector3& v, const Vector3& n) const;
 	};
 }

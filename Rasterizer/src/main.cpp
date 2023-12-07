@@ -10,7 +10,8 @@
 #include "Timer.h"
 #include "Renderer.h"
 
-//Scen includes
+//Scene includes
+#include "LambertShader.h"
 #include "ReferenceScene.h"
 
 using namespace dae;
@@ -76,9 +77,23 @@ int main(int argc, char* args[])
 					case SDL_SCANCODE_X:
 						takeScreenshot = true;
 						break;
+
+					case SDL_SCANCODE_F4:
+						pRenderer->ToggleDebugDepthBuffer();
+						break;
+
+					case SDL_SCANCODE_F6:
+						LambertShader::ToggleNormalMapping();
+						break;
+
+					case SDL_SCANCODE_F7:
+						LambertShader::CycleMode();
+						break;
 				}
 				break;
 			}
+
+			pScene->OnEvent(e);
 		}
 
 		//--------- Update ---------
